@@ -14,6 +14,7 @@
 #include <gz/common/StringUtils.hh>
 
 #include <sdf/Box.hh>
+#include <sdf/Plane.hh>
 
 #include "rust_binding.h"
 namespace wgpu_sensor { 
@@ -60,7 +61,7 @@ namespace wgpu_sensor {
   }
 
   Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom) {
-    
+
      if (geom.Type() == sdf::GeometryType::BOX) {
       auto bmesh = geom.BoxShape();
       auto mesh = create_mesh();
@@ -115,6 +116,27 @@ namespace wgpu_sensor {
       }
       return mesh;
     }
+
+  	else if (geom.Type() == sdf::GeometryType::PLANE) {
+    auto pmesh = geom.PlaneShape();
+    auto mesh = create_mesh();
+
+    add_mesh_vertex(mesh, -pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
+    add_mesh_vertex(mesh, pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
+    add_mesh_vertex(mesh, pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
+    add_mesh_vertex(mesh, -pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
+
+    uint16_t indices[] = {
+      0, 1, 2,
+      2, 3, 0
+    };
+    for (auto x : indices) {
+      add_mesh_face(mesh, x);
+    }
+
+    return mesh;
+  }
+
     return nullptr;
   }
 
