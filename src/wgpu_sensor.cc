@@ -9,6 +9,9 @@
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
+#include <gz/common/MeshManager.hh>
+#include <gz/common/SubMesh.hh>
+
 #include <gz/transport/Node.hh>
 
 #include <gz/common/StringUtils.hh>
@@ -136,6 +139,60 @@ namespace wgpu_sensor {
 
     return mesh;
   }
+  else if (geom.Type() == sdf::GeometryType::MESH)
+  {
+      auto mesh_shape = geom.MeshShape();
+	  auto mesh = create_mesh();
+
+      if (!mesh_shape) {
+        gzerr << "Failed to get MeshShape from geometry." << std::endl;
+        return nullptr;
+      }
+
+      const std::string &uri = mesh_shape->Uri();
+      const gz::common::Mesh *mesh_data = gz::common::MeshManager::Instance()->Load(uri);
+      if (!mesh_data) {
+        gzerr << "Failed to load mesh from URI: " << uri << std::endl;
+        return nullptr;
+      }
+      if (!mesh) {
+        gzerr << "Failed to create_mesh for MESH." << std::endl;
+        return nullptr;
+      }
+
+      const gz::math::Vector3d scale = mesh_shape->Scale();
+      //0 scale error?
+
+      //uint16_t might overflow
+      uint16_t vertex_offset = 0;
+
+      for (unsigned int i = 0; i < mesh_data->SubMeshCount(); ++i)
+      {
+        auto submesh_weak = mesh_data->SubMeshByIndex(i);
+        auto submesh_locked = submesh_weak.lock();
+        if (!submesh_locked) continue;
+        const gz::common::SubMesh *submesh = submesh_locked.get();
+
+        // Add vertices (scaled)
+        for (unsigned int v = 0; v < submesh->VertexCount(); ++v) {
+          const auto &vertex = submesh->Vertex(v);
+          add_mesh_vertex(mesh,
+            static_cast<float>(vertex.X() * scale.X()),
+            static_cast<float>(vertex.Y() * scale.Y()),
+            static_cast<float>(vertex.Z() * scale.Z()));
+        }
+
+        // Add indices with offset
+        for (unsigned int x = 0; x < submesh->IndexCount(); ++x) {
+          uint16_t index = submesh->Index(x) + vertex_offset;
+          add_mesh_face(mesh, index);
+        }
+
+        vertex_offset += submesh->VertexCount();
+      }
+
+      return mesh;
+    }
 
     return nullptr;
   }

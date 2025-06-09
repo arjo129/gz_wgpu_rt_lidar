@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<sdf version="1.11">
+  <world name="shapes">
+    <scene>
+      <ambient>1.0 1.0 1.0</ambient>
+      <background>0.8 0.8 0.8</background>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 15 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="camera">
+      <pose>0 0 10.0 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>0.1 0.1</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>0.1 0.1</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.0 0.8 1</ambient>
+            <diffuse>0.8 0.0 0.8 1</diffuse>
+            <specular>0.8 0.0 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+      <plugin filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor">
+      </plugin>
+    </model>
+          <model name="ground_plane">
+                <static>true</static>
+                <link name="link">
+                  <collision name="collision">
+                    <geometry>
+                      <plane>
+                        <normal>0 0 1</normal>
+                        <size>20 20</size>
+                      </plane>
+                    </geometry>
+                  </collision>
+                  <visual name="visual">
+                    <geometry>
+                      <plane>
+                        <normal>0 0 1</normal>
+                        <size>20 20</size>
+                      </plane>
+                    </geometry>
+                    <material>
+                      <ambient>0.8 0.8 0.8 1</ambient>
+                      <diffuse>0.8 0.8 0.8 1</diffuse>
+                      <specular>0.8 0.8 0.8 1</specular>
+                    </material>
+                  </visual>
+                </link>
+              </model>
+
+      <model name="hatchback_red">
+        <static>true</static>
+        <link name="link">
+          <collision name="collision">
+            <pose>0 0 0 0 0 1.57079632679</pose>
+            <geometry>
+              <mesh>
+                <scale>0.0254 0.0254 0.0254</scale>
+                <uri>meshes/hatchback.obj</uri>
+              </mesh>
+            </geometry>
+          </collision>
+          <visual name="visual">
+            <pose>0 0 0 0 0 1.57079632679</pose>
+            <geometry>
+              <mesh>
+                <scale>0.0254 0.0254 0.0254</scale>
+                <uri>meshes/hatchback.obj</uri>
+              </mesh>
+            </geometry>
+          </visual>
+        </link>
+      </model>
+  </world>
+</sdf>
