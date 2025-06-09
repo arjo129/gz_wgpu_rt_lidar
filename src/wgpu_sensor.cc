@@ -122,29 +122,29 @@ namespace wgpu_sensor {
 
   	else if (geom.Type() == sdf::GeometryType::PLANE) {
 
-    auto pmesh = geom.PlaneShape();
-    auto mesh = create_mesh();
+      auto pmesh = geom.PlaneShape();
+      auto mesh = create_mesh();
 
-    add_mesh_vertex(mesh, -pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
-    add_mesh_vertex(mesh, pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
-    add_mesh_vertex(mesh, pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
-    add_mesh_vertex(mesh, -pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
+      add_mesh_vertex(mesh, -pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
+      add_mesh_vertex(mesh, pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
+      add_mesh_vertex(mesh, pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
+      add_mesh_vertex(mesh, -pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
 
-    uint16_t indices[] = {
-      0, 1, 2,
-      2, 3, 0
-    };
-    for (auto x : indices) {
-      add_mesh_face(mesh, x);
+      uint16_t indices[] = {
+        0, 1, 2,
+        2, 3, 0
+      };
+      for (auto x : indices) {
+       add_mesh_face(mesh, x);
+      }
+
+      return mesh;
     }
-
-    return mesh;
-  }
     
-  else if (geom.Type() == sdf::GeometryType::MESH)
-  {
+    else if (geom.Type() == sdf::GeometryType::MESH) {
+      
       auto mesh_shape = geom.MeshShape();
-	  auto mesh = create_mesh();
+	    auto mesh = create_mesh();
 
       if (!mesh_shape) {
         gzerr << "Failed to get MeshShape from geometry." << std::endl;
@@ -190,7 +190,8 @@ namespace wgpu_sensor {
           add_mesh_face(mesh, index);
         }
 
-        vertex_offset += submesh->VertexCount();
+      vertex_offset += submesh->VertexCount();
+      }
 
       return mesh;
     }

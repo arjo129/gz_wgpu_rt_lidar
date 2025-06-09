@@ -303,7 +303,7 @@ pub extern "C" fn create_rt_depth_camera(runtime: *mut RtRuntime, width: u32, he
         &mut *runtime
     };
 
-    let camera = wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov);
+    let camera = wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov, 50.0);
     Box::into_raw(Box::new(RtDepthCamera {
         camera: futures::executor::block_on(camera)
     }))
