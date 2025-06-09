@@ -121,6 +121,7 @@ namespace wgpu_sensor {
     }
 
   	else if (geom.Type() == sdf::GeometryType::PLANE) {
+
     auto pmesh = geom.PlaneShape();
     auto mesh = create_mesh();
 
@@ -139,6 +140,7 @@ namespace wgpu_sensor {
 
     return mesh;
   }
+    
   else if (geom.Type() == sdf::GeometryType::MESH)
   {
       auto mesh_shape = geom.MeshShape();
@@ -189,7 +191,6 @@ namespace wgpu_sensor {
         }
 
         vertex_offset += submesh->VertexCount();
-      }
 
       return mesh;
     }
