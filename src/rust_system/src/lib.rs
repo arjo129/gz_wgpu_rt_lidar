@@ -2,6 +2,7 @@ use glam::{Affine3A, Mat3A, Quat, Vec3A};
 use ndarray::ShapeBuilder;
 use wgpu::Device;
 use wgpu_rt_lidar::{utils::get_raytracing_gpu, vertex, AssetMesh, Instance, Vertex};
+use std::time::Instant;
 
 #[no_mangle]
 pub extern "C" fn create_mesh() -> *mut Mesh {
@@ -330,30 +331,26 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
         assert!(!view.is_null());
         &mut *view
     };
+    let start_time = Instant::now();
 
     scene.scene.visualize(&scene.rec);
     let res = futures::executor::block_on(camera.camera.render_depth_camera(&scene.scene, &runtime.device, &runtime.queue, view.view.inverse()));
-    let mut image = ndarray::Array::<u16, _>::from_elem(
-        (
-            camera.camera.width() as usize,
-            camera.camera.height() as usize,
-        )
-            .f(),
-        65535,
-    );
-    for (i, x) in res.iter().enumerate() {
-        let x = (x * 1000.0) as u16;
-        image[(
-            i / camera.camera.width() as usize,
-            i % camera.camera.width() as usize,
-        )] = x;
-    }
+    let width = camera.camera.width() as usize;
+    let height = camera.camera.height() as usize;
+    let converted_data: Vec<u16> = res.iter()
+        .map(|x| (x * 1000.0) as u16)
+        .collect();
+    let image = ndarray::Array::from_shape_vec((height, width).f(), converted_data)
+        .expect("Shape mismatch");
+
     let depth_image = rerun::DepthImage::try_from(image)
         .unwrap()
         .with_meter(1000.0)
         .with_colormap(rerun::components::Colormap::Viridis);
     scene.rec.log("depth_cloud", &depth_image);
 
+    let elapsed = start_time.elapsed();
+    println!("Render time: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     //println!("{:?}", res.iter().fold(0.0, |acc, x| x.w.max(acc))
     
 }
