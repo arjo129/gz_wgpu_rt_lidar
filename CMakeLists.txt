@@ -49,8 +49,8 @@ add_library(wgpu_rt_sensor SHARED
 
 target_link_libraries(wgpu_rt_sensor PUBLIC
         rust_system
-        gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
-        gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+        gz-plugin::gz-plugin
+        gz-sim::gz-sim
         gz-common::graphics
         gz-math::gz-math
 )
@@ -60,8 +60,8 @@ install(TARGETS wgpu_rt_sensor DESTINATION lib)
 add_library(sensorconfig SHARED
   src/sensor_config.cc)
 target_link_libraries(sensorconfig PUBLIC
-        gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
-        gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+        gz-plugin::gz-plugin
+        gz-sim::gz-sim
         gz-common::graphics
 )
 
