@@ -56,4 +56,14 @@ target_link_libraries(wgpu_rt_sensor PUBLIC
 )
 
 install(TARGETS wgpu_rt_sensor DESTINATION lib)
+
+add_library(sensorconfig SHARED
+  src/sensor_config.cc)
+target_link_libraries(sensorconfig PUBLIC
+        gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
+        gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+        gz-common::graphics
+)
+
+install(TARGETS sensorconfig DESTINATION lib)
 ament_package()
