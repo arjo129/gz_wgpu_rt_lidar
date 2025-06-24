@@ -20,6 +20,8 @@ find_package(gz_common_vendor REQUIRED)
 find_package(gz-common REQUIRED COMPONENTS graphics)
 find_package(gz_math_vendor REQUIRED)
 find_package(gz-math REQUIRED)
+find_package(gz_sensors_vendor REQUIRED)
+find_package(gz-sensors REQUIRED)
 
 #============================================================================
 # Corrosion
@@ -66,4 +68,30 @@ target_link_libraries(sensorconfig PUBLIC
 )
 
 install(TARGETS sensorconfig DESTINATION lib)
+
+add_library(rtsensor SHARED
+        src/rtsensor.cc
+)
+target_link_libraries(rtsensor PUBLIC
+        gz-plugin::gz-plugin
+        gz-sim::gz-sim
+        gz-sensors::gz-sensors
+        gz-common::graphics
+        gz-math::gz-math
+)
+
+install(TARGETS rtsensor DESTINATION lib)
+
+add_library(rtsensorsystem SHARED
+        src/rtsensorsystem.cc
+)
+target_link_libraries(rtsensorsystem PUBLIC
+        rtsensor
+        gz-plugin::gz-plugin
+        gz-sim::gz-sim
+        gz-sensors::gz-sensors
+        gz-common::graphics
+        gz-math::gz-math
+)
+install(TARGETS rtsensorsystem DESTINATION lib)
 ament_package()
