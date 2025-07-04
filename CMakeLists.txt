@@ -20,6 +20,8 @@ find_package(gz_common_vendor REQUIRED)
 find_package(gz-common REQUIRED COMPONENTS graphics)
 find_package(gz_math_vendor REQUIRED)
 find_package(gz-math REQUIRED)
+find_package(gz_sensors_vendor REQUIRED)
+find_package(gz-sensors REQUIRED)
 
 #============================================================================
 # Corrosion
@@ -49,10 +51,11 @@ add_library(wgpu_rt_sensor SHARED
 
 target_link_libraries(wgpu_rt_sensor PUBLIC
         rust_system
-        gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
-        gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+        gz-plugin::gz-plugin
+        gz-sim::gz-sim
         gz-common::graphics
         gz-math::gz-math
+        gz-sensors::gz-sensors
 )
 
 install(TARGETS wgpu_rt_sensor DESTINATION lib)

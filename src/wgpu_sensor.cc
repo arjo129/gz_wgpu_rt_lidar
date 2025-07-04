@@ -5,6 +5,9 @@
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/Geometry.hh>
 #include <gz/sim/components/Visual.hh>
+#include <gz/sim/components/CustomSensor.hh>
+#include <gz/sim/components/ParentEntity.hh>
+#include <gz/sim/components/Name.hh>
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
@@ -17,8 +20,14 @@
 
 #include <sdf/Box.hh>
 #include <sdf/Plane.hh>
+#include <sdf/Sensor.hh>
+#include <unordered_map>
+#include <memory>
+#include <string>
 
 #include "rust_binding.h"
+
+#include "rtsensor.cc"
 
 namespace wgpu_sensor
 {
@@ -26,6 +35,7 @@ namespace wgpu_sensor
   class WGPURtSensor :
     public gz::sim::System,
     public gz::sim::ISystemConfigure,
+    public gz::sim::ISystemPreUpdate,
     public gz::sim::ISystemPostUpdate
   {
     /// \brief Constructor
@@ -39,9 +49,16 @@ namespace wgpu_sensor
                            gz::sim::EntityComponentManager &_ecm,
                            gz::sim::EventManager &_eventMgr) override;
 
+    public: void PreUpdate(const gz::sim::UpdateInfo &_info,
+                           gz::sim::EntityComponentManager &_ecm) override;
+
     // Documentation inherited
     public: void PostUpdate(const gz::sim::UpdateInfo &_info,
                             const gz::sim::EntityComponentManager &_ecm) override;
+
+    public: void RemoveSensorEntities(const gz::sim::EntityComponentManager &_ecm);
+
+    private: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
 
     RtScene* rt_scene {nullptr};
     RtRuntime* rt_runtime;
@@ -49,6 +66,7 @@ namespace wgpu_sensor
     std::unordered_map<size_t, size_t> gz_entity_to_rt_instance;
     gz::sim::Entity camera_entity;
     std::chrono::steady_clock::duration last_time;
+    std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
   };
 
   WGPURtSensor::WGPURtSensor() {}
@@ -66,7 +84,7 @@ namespace wgpu_sensor
     free_rt_runtime(rt_runtime);
   }
 
-  Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom)
+  Mesh* WGPURtSensor::convertSDFModelToWGPU(const sdf::Geometry& geom)
   {
     if (geom.Type() == sdf::GeometryType::BOX)
     {
@@ -218,6 +236,59 @@ namespace wgpu_sensor
     this->camera_entity = _entity;
   }
 
+  void WGPURtSensor::PreUpdate(const gz::sim::UpdateInfo &_info,
+                               gz::sim::EntityComponentManager &_ecm)
+  {
+    // Detect new custom sensors and create RtSensor instances for them
+    _ecm.EachNew<gz::sim::components::CustomSensor,
+                 gz::sim::components::ParentEntity>(
+      [&](const gz::sim::Entity &_entity,
+          const gz::sim::components::CustomSensor *_custom,
+          const gz::sim::components::ParentEntity *_parent) -> bool
+      {
+        // Get the sensor's scoped name (e.g., "world_name::model_name::link_name::sensor_name")
+        // Remove world scope for cleaner names if needed for internal logic
+        auto sensorScopedName = gz::sim::removeParentScope(
+            gz::sim::scopedName(_entity, _ecm, "::", false), "::");
+        sdf::Sensor data = _custom->Data();
+        data.SetName(sensorScopedName); // Ensure SDF data has the correct name
+
+        // If the sensor topic is not explicitly set in SDF, generate a default one
+        if (data.Topic().empty())
+        {
+          std::string topic = gz::sim::scopedName(_entity, _ecm) + "/rt_sensor";
+          data.SetTopic(topic);
+        }
+
+        // Create an instance of our custom RtSensor
+        auto sensor = std::make_shared<rtsensor::RtSensor>();
+        if (!sensor->Load(data))
+        {
+          gzerr << "[WGPURtSensor] Failed to load RtSensor for entity ["
+                << _entity << "] with name [" << sensorScopedName << "]" << std::endl;
+          return false;
+        }
+
+        // Set the parent entity name on the RtSensor instance for later pose lookup
+        auto parentNameComp = _ecm.Component<gz::sim::components::Name>(_parent->Data());
+        if (parentNameComp)
+        {
+          sensor->SetParentEntityName(parentNameComp->Data());
+        }
+        else
+        {
+          gzerr << "[WGPURtSensor] Parent entity name not found for sensor entity [" << _entity << "]" << std::endl;
+        }
+
+        // Store the new sensor in our map
+        this->entitySensorMap.insert(std::make_pair(_entity, std::move(sensor)));
+        gzmsg << "[WGPURtSensor] Registered new custom sensor for entity ["
+              << _entity << "] named [" << sensorScopedName << "]" << std::endl;
+        return true;
+      });
+  }
+
+
   void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
                                 const gz::sim::EntityComponentManager &_ecm)
   {
@@ -294,6 +365,8 @@ namespace wgpu_sensor
 
       set_transforms(rt_scene, rt_runtime, rt_scene_update);
 
+      // Old camera rendering code
+      /*
       auto camera_pose = gz::sim::worldPose(camera_entity, _ecm);
       auto view_matrix = create_view_matrix(camera_pose.Pos().X(), camera_pose.Pos().Y(), camera_pose.Pos().Z(), camera_pose.Rot().X(), camera_pose.Rot().Y(), camera_pose.Rot().Z(), camera_pose.Rot().W());
       render_depth(rt_depth_camera, rt_scene, rt_runtime, view_matrix);
@@ -301,12 +374,92 @@ namespace wgpu_sensor
       free_view_matrix(view_matrix);
       high_resolution_clock::time_point t2 = high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-      gzmsg << "Time taken to render depth: " << duration << std::endl;
+      gzmsg << "Time taken to render depth: " << duration << std::endl; */
+
+      for (auto const& [entityId, sensor] : this->entitySensorMap)
+      {
+        // Find the parent entity's pose to get the sensor's world pose
+        // (assuming the sensor's pose is relative to its parent link/model)
+        gz::sim::Entity parentEntity = gz::sim::kNullEntity;
+        _ecm.Each<gz::sim::components::Name>(
+            [&](const gz::sim::Entity &ent, const gz::sim::components::Name *name)
+            {
+                if (name->Data() == sensor->ParentEntityName())
+                {
+                    parentEntity = ent;
+                    return false; // Found, stop iteration
+                }
+                return true;
+            });
+
+        if (parentEntity != gz::sim::kNullEntity)
+        {
+          // Get the world pose of the parent entity
+          auto sensor_world_pose = gz::sim::worldPose(parentEntity, _ecm);
+          auto view_matrix = create_view_matrix(
+            static_cast<float>(sensor_world_pose.Pos().X()), static_cast<float>(sensor_world_pose.Pos().Y()), static_cast<float>(sensor_world_pose.Pos().Z()),
+            static_cast<float>(sensor_world_pose.Rot().X()), static_cast<float>(sensor_world_pose.Rot().Y()), static_cast<float>(sensor_world_pose.Rot().Z()), static_cast<float>(sensor_world_pose.Rot().W()));
+
+          render_depth(this->rt_depth_camera, this->rt_scene, this->rt_runtime, view_matrix);
+          free_view_matrix(view_matrix);
+          gzdbg << "[WGPURtSensor] Rendered from custom sensor [" << sensor->Name() << "]" << std::endl;
+        }
+        else
+        {
+          gzwarn << "[WGPURtSensor] Could not find parent entity [" << sensor->ParentEntityName()
+                 << "] for custom sensor [" << sensor->Name() << "], skipping render." << std::endl;
+        }
+      }
+
+      free_rt_scene_update(rt_scene_update); // Free the update object
     }
+
+    // --- Update Custom Sensors ---
+    if (!_info.paused)
+    {
+      for (auto &[entity, sensor] : this->entitySensorMap)
+      {
+        auto baseSensor = std::dynamic_pointer_cast<gz::sensors::Sensor>(sensor);
+        if (baseSensor)
+        {
+          baseSensor->Update(_info.simTime, false); // false to respect update rate
+        }
+        else
+        {
+          sensor->Update(_info.simTime);
+          gzerr << "[WGPURtSensor] Error casting custom sensor to base Sensor class." << std::endl;
+        }
+	  }
+    }
+    // --- Remove Sensors ---
+    this->RemoveSensorEntities(_ecm);
+  }
+  void WGPURtSensor::RemoveSensorEntities(
+      const gz::sim::EntityComponentManager &_ecm)
+  {
+    //GZ_PROFILE("WGPURtSensor::RemoveSensorEntities");
+
+    // Iterate over entities that have been removed and clear them from our map
+    _ecm.EachRemoved<gz::sim::components::CustomSensor>(
+      [&](const gz::sim::Entity &_entity,
+          const gz::sim::components::CustomSensor *) -> bool
+      {
+        if (this->entitySensorMap.erase(_entity) == 0)
+        {
+          gzerr << "[WGPURtSensor] Internal error: tried to remove RtSensor for entity ["
+                << _entity << "] but it was not found in map." << std::endl;
+        }
+        else
+        {
+          gzmsg << "[WGPURtSensor] Removed RtSensor for entity [" << _entity << "]." << std::endl;
+        }
+        return true;
+      });
   }
 }
 
 GZ_ADD_PLUGIN(wgpu_sensor::WGPURtSensor,
               gz::sim::System,
               gz::sim::ISystemConfigure,
+              gz::sim::ISystemPreUpdate,
               gz::sim::ISystemPostUpdate)
