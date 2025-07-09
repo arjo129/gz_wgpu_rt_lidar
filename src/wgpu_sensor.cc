@@ -27,7 +27,7 @@
 
 #include "rust_binding.h"
 
-#include "rtsensor.cc"
+#include "rtsensor.hh"
 
 namespace wgpu_sensor
 {
@@ -58,7 +58,7 @@ namespace wgpu_sensor
 
     public: void RemoveSensorEntities(const gz::sim::EntityComponentManager &_ecm);
 
-    private: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
+    public: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
 
     RtScene* rt_scene {nullptr};
     RtRuntime* rt_runtime;
@@ -253,13 +253,6 @@ namespace wgpu_sensor
         sdf::Sensor data = _custom->Data();
         data.SetName(sensorScopedName); // Ensure SDF data has the correct name
 
-        // If the sensor topic is not explicitly set in SDF, generate a default one
-        if (data.Topic().empty())
-        {
-          std::string topic = gz::sim::scopedName(_entity, _ecm) + "/rt_sensor";
-          data.SetTopic(topic);
-        }
-
         // Create an instance of our custom RtSensor
         auto sensor = std::make_shared<rtsensor::RtSensor>();
         if (!sensor->Load(data))
@@ -437,7 +430,6 @@ namespace wgpu_sensor
   void WGPURtSensor::RemoveSensorEntities(
       const gz::sim::EntityComponentManager &_ecm)
   {
-    //GZ_PROFILE("WGPURtSensor::RemoveSensorEntities");
 
     // Iterate over entities that have been removed and clear them from our map
     _ecm.EachRemoved<gz::sim::components::CustomSensor>(

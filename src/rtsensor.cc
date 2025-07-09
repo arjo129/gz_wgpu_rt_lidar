@@ -1,66 +1,13 @@
-#include <gz/plugin/Register.hh>
 #include <gz/common/Console.hh>
 #include <gz/sensors/Sensor.hh>
 #include <gz/sensors/SensorFactory.hh>
 #include <gz/math/Pose3.hh>
 #include <sdf/Element.hh>
 #include <string>
-#include <chrono>
 
-namespace rtsensor
-{
-  class RtSensor : public gz::sensors::Sensor
-  {
-    /// \brief Sensor type enumeration.
-    public: enum class SensorType
-    {
-      CAMERA,
-      LIDAR
-    };
+#include "rtsensor.hh"
 
-    /// \brief Constructor.
-    public: RtSensor();
-
-    /// \brief Destructor.
-    public: ~RtSensor();
-
-    /// \brief Load the sensor with SDF parameters.
-    public: bool Load(const sdf::Sensor &_sdf) override;
-
-    /// \brief Update the sensor and generate data.
-    public: bool Update(
-      const std::chrono::steady_clock::duration &_now) override;
-
-    /// \brief Set the current pose of the sensor in world coordinates.
-    public: void SetPose(const gz::math::Pose3d &_pose);
-
-    /// \brief Get the latest world pose of the sensor.
-    public: const gz::math::Pose3d &Pose() const;
-
-    /// \brief Get the sensor type.
-    public: SensorType Type() const;
-
-    /// \brief Get the Field of View (FOV) configured for the sensor.
-    public: double FOV() const;
-
-    /// \brief Set the name of the parent entity (e.g., link or model) this sensor is attached to.
-    public: void SetParentEntityName(const std::string& _parentName);
-
-    /// \brief Get the name of the parent entity.
-    public: const std::string& ParentEntityName() const;
-
-    /// \brief Sensor type (camera or lidar).
-    private: SensorType sensorType{SensorType::CAMERA};
-
-    /// \brief Current sensor pose in world coordinates.
-    private: gz::math::Pose3d currentPose{gz::math::Pose3d::Zero};
-
-    /// \brief Field of View for the sensor (camera or lidar).
-    private: double fov{1.047}; // Default FOV (approx 60 degrees)
-
-    /// \brief The name of the parent entity (model or link) this sensor is attached to.
-    private: std::string parentEntityName;
-  };
+using namespace rtsensor;
 
   //////////////////////////////////////////////////
   RtSensor::RtSensor()
@@ -145,11 +92,6 @@ namespace rtsensor
   //////////////////////////////////////////////////
   bool RtSensor::Update(const std::chrono::steady_clock::duration &_now)
   {
-    // For RtSensor, the actual rendering and data generation is handled by the
-    // WGPURtSensor system plugin. This method is primarily here to fulfill the
-    // base class requirement and can be used for any internal sensor state updates.
-    // We can add more specific update logic here if needed for the sensor itself,
-    // independent of the WGPU rendering.
     gzdbg << "[RtSensor] Update called for sensor [" << this->Name() << "] at sim time: "
           << std::chrono::duration_cast<std::chrono::milliseconds>(_now).count() << "ms" << std::endl;
     return true;
@@ -190,11 +132,3 @@ namespace rtsensor
   {
     this->currentPose = _pose;
   }
-
-} // namespace rtsensor
-
-
-GZ_ADD_PLUGIN(rtsensor::RtSensor, gz::sensors::Sensor)
-
-
-GZ_ADD_PLUGIN_ALIAS(rtsensor::RtSensor, "rtsensor::RtSensor")
