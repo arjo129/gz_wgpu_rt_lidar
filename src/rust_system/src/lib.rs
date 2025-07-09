@@ -367,4 +367,135 @@ pub extern "C" fn free_rt_depth_camera(ptr: *mut RtDepthCamera)
     unsafe {
         drop(Box::from_raw(ptr));
     }
-} 
+}
+
+struct Rt3DLidarConfiguration {
+    num_lasers: usize,
+    min_vertical_angle: f32,
+    max_vertical_angle: f32,
+    step_vertical_angle: f32,
+    min_horizontal_angle: f32,
+    max_horizontal_angle: f32,
+    step_horizontal_angle: f32,
+    num_steps: usize
+}
+
+#[no_mangle]
+fn new_lidar_config(
+    num_lasers: usize,
+    num_steps: usize,
+    min_vertical_angle: f32,
+    max_vertical_angle: f32,
+    step_vertical_angle: f32,
+    min_horizontal_angle: f32,
+    max_horizontal_angle: f32,
+    step_horizontal_angle: f32
+) -> *mut Rt3DLidarConfiguration {
+    Box::into_raw(Box::new(Rt3DLidarConfiguration {
+        num_lasers,
+        min_vertical_angle,
+        max_vertical_angle,
+        step_vertical_angle,
+        min_horizontal_angle,
+        max_horizontal_angle,
+        step_horizontal_angle,
+        num_steps: num_steps
+    }))
+}
+
+#[no_mangle]
+fn free_lidar_config(ptr: *mut Rt3DLidarConfiguration) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(ptr));
+    }
+}
+
+impl Rt3DLidarConfiguration {
+    fn to_individual_beam_directions(&self) -> Vec<glam::Vec3> {
+        let mut directions = Vec::new();
+        for i in 0..self.num_lasers {
+            let vertical_angle = self.min_vertical_angle + i as f32 * self.step_vertical_angle;
+            for j in 0..self.num_steps {
+                let horizontal_angle = self.min_horizontal_angle + j as f32 * self.step_horizontal_angle;
+                let direction = glam::Vec3::new(
+                    vertical_angle.cos() * horizontal_angle.sin(),
+                    vertical_angle.sin(),
+                    vertical_angle.cos() * horizontal_angle.cos()
+                );
+                directions.push(direction);
+            }
+        }
+        directions
+    }
+}
+
+#[repr(C)]
+struct RtLidar{
+    lidar: wgpu_rt_lidar::lidar::Lidar
+}
+
+#[no_mangle]
+pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt3DLidarConfiguration) -> *mut RtLidar {
+    let runtime = unsafe {
+        assert!(!runtime.is_null());
+        &mut *runtime
+    };
+
+    let lidar_config = unsafe {
+        assert!(!lidar_config.is_null());
+        &mut *lidar_config
+    };
+
+    let beams = lidar_config.to_individual_beam_directions();
+
+    let lidar = wgpu_rt_lidar::lidar::Lidar::new(&runtime.device, beams);
+    Box::into_raw(Box::new(RtLidar {
+        lidar: futures::executor::block_on(lidar)
+    }))
+}
+
+#[no_mangle]
+pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) {
+    let lidar = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let scene = unsafe {
+        assert!(!scene.is_null());
+        &mut *scene
+    };
+
+    let runtime = unsafe {
+        assert!(!runtime.is_null());
+        &mut *runtime
+    };
+
+    let view = unsafe {
+        assert!(!view.is_null());
+        &mut *view
+    };
+
+    scene.scene.visualize(&scene.rec);
+    let res = futures::executor::block_on(lidar.lidar.render_lidar_beams(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
+    
+    let points: Vec<[f32; 3]> = res.chunks(4).map(|chunk| [chunk[0], chunk[1], chunk[2]]).collect();
+    //let intensities: Vec<f32> = res.chunks(4).map(|chunk| chunk[3]).collect();
+
+    let points3d = rerun::Points3D::new(points);
+    scene.rec.log("lidar_points", &points3d);
+}
+
+#[no_mangle]
+pub extern "C" fn free_rt_lidar(ptr: *mut RtLidar)
+{
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(ptr));
+    }
+}
