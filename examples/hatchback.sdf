@@ -2,6 +2,19 @@
 <sdf version="1.11">
   <world name="shapes">
 
+    <plugin
+      filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor"/>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster"/>
+
     <scene>
       <ambient>1.0 1.0 1.0</ambient>
       <background>0.8 0.8 0.8</background>
@@ -51,9 +64,17 @@
             <specular>0.8 0.0 0.8 1</specular>
           </material>
         </visual>
+
+        <!-- Custom Camera Sensor -->
+        <sensor name="my_rt_camera" type="custom" gz:type="rt_camera">
+          <pose>0 0 0.1 0 0 0</pose>
+          <always_on>1</always_on>
+          <update_rate>10</update_rate>
+          <gz:rt_camera>
+            <fov>1.047</fov>
+          </gz:rt_camera>
+        </sensor>
       </link>
-      <plugin filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor">
-      </plugin>
     </model>
 
     <model name="ground_plane">
