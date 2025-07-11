@@ -5,11 +5,15 @@ This project builds on the Raytracing sensors provided by the WGPU sensors libra
 ## Current Status
 This project is currently in active development. While it can accurately render basic shapes like boxes, planes, and meshes, full SDF shape support and advanced LiDAR features are still being implemented.
 
+Summary of current features:
+- **Raytracing Sensors**: Provides custom raytracing sensors for Gazebo using the WGPU library.
+- **Geometry Support**: Currently supports rendering of boxes, planes, and meshes.
+- **Image Output**: Output depth images are sent over as gz:msgs:Image that can be visualized in Gazebo.
+
 ## Requirements
 This package is designed to be built on ROS 2 Jazzy. To build and run this project, you will need:
 - A recent version of [Rust](https://www.rust-lang.org/tools/install).
 - A non-apple ray-tracing enabled GPU (NVIDIA RTX or above, AMD RX6000 and above, Steam Deck or Intel Battlemage)
-- [Rerun](https://rerun.io/) (v0.22.1), as this prototype currently visualizes the depth data on the GPU as a rerun object.
 
 ## Supported platform
 This library is only available as a source build on ROS2 Jazzy.
@@ -44,7 +48,7 @@ After building and sourcing your workspace, you can run an example SDF file:
 ```bash
 gz sim examples/shapes.sdf
 ```
-This will launch Gazebo Sim with the WGPU raytracing sensors active. You should see a Rerun Viewer window pop up displaying the depth data from the sensors.
+This will launch Gazebo Sim with the WGPU raytracing sensors active. You can see the raytraced depth output in the Gazebo Image Display.
 
 ## Screenshots
 
@@ -91,4 +95,3 @@ To integrate the WGPU-based raytracing sensors into your Gazebo simulation, you 
 - Support all SDF shapes (currently only boxes, planes, and meshes are supported)
 - Move rendering logic off the main thread via a queue.
 - Explore and implement LiDARs.
-- Implement data publishing for custom sensors (e.g., `gz::msgs::Image` for cameras, `gz::msgs::PointCloudPacked` for LiDARs).

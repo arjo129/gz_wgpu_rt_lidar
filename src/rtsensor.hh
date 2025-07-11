@@ -43,6 +43,12 @@ namespace rtsensor
     /// \brief Get the Field of View (FOV) configured for the sensor.
     public: double FOV() const;
 
+    /// \brief Topic name for publishing sensor data.
+    private: std::string topic;
+
+    /// \brief Get the topic name for this sensor.
+    public: const std::string& TopicName() const;
+
     /// \brief Set the name of the parent entity (e.g., link or model) this sensor is attached to.
     public: void SetParentEntityName(const std::string& _parentName);
 

@@ -33,6 +33,8 @@ using namespace rtsensor;
       return false;
     }
 
+    this->topic = this->Topic();
+
     // Get the custom sensor type from SDF.
     // This is expected to be defined as <sensor type="custom" gz:type="rt_camera"> or "rt_lidar"
     std::string customType;
@@ -85,8 +87,13 @@ using namespace rtsensor;
 
     gzmsg << "[RtSensor] Successfully loaded sensor [" << this->Name() << "] of type ["
           << (this->sensorType == SensorType::LIDAR ? "LIDAR" : "CAMERA")
-          << "], FOV: [" << this->fov << "]" << std::endl;
+          << "], topic: [" << this->topic << "], FOV: [" << this->fov << "]" << std::endl;
     return true;
+  }
+
+  const std::string& RtSensor::TopicName() const
+  {
+    return this->topic;
   }
 
   //////////////////////////////////////////////////

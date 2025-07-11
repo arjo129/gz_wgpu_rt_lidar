@@ -15,6 +15,7 @@
 #include <gz/common/SubMesh.hh>
 
 #include <gz/transport/Node.hh>
+#include <gz/msgs/image.pb.h>
 
 #include <gz/common/StringUtils.hh>
 
@@ -67,6 +68,9 @@ namespace wgpu_sensor
     gz::sim::Entity camera_entity;
     std::chrono::steady_clock::duration last_time;
     std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
+
+    gz::transport::Node node; // Gazebo Transport Node
+    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> image_publishers; // Map to store publishers per sensor
   };
 
   WGPURtSensor::WGPURtSensor() {}
@@ -253,6 +257,13 @@ namespace wgpu_sensor
         sdf::Sensor data = _custom->Data();
         data.SetName(sensorScopedName); // Ensure SDF data has the correct name
 
+        // If the sensor topic is not explicitly set in SDF, generate a default one
+        if (data.Topic().empty())
+        {
+          std::string topic = gz::sim::scopedName(_entity, _ecm) + "/rt_sensor";
+          data.SetTopic(topic);
+        }
+
         // Create an instance of our custom RtSensor
         auto sensor = std::make_shared<rtsensor::RtSensor>();
         if (!sensor->Load(data))
@@ -272,6 +283,10 @@ namespace wgpu_sensor
         {
           gzerr << "[WGPURtSensor] Parent entity name not found for sensor entity [" << _entity << "]" << std::endl;
         }
+
+        this->image_publishers[_entity] = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
+        gzmsg << "[WGPURtSensor] Advertising image topic [" << sensor->TopicName()
+              << "] for sensor [" << sensor->Name() << "]" << std::endl;
 
         // Store the new sensor in our map
         this->entitySensorMap.insert(std::make_pair(_entity, std::move(sensor)));
@@ -371,6 +386,7 @@ namespace wgpu_sensor
 
       for (auto const& [entityId, sensor] : this->entitySensorMap)
       {
+        auto publisher_it = this->image_publishers.find(entityId);
         // Find the parent entity's pose to get the sensor's world pose
         // (assuming the sensor's pose is relative to its parent link/model)
         gz::sim::Entity parentEntity = gz::sim::kNullEntity;
@@ -393,9 +409,29 @@ namespace wgpu_sensor
             static_cast<float>(sensor_world_pose.Pos().X()), static_cast<float>(sensor_world_pose.Pos().Y()), static_cast<float>(sensor_world_pose.Pos().Z()),
             static_cast<float>(sensor_world_pose.Rot().X()), static_cast<float>(sensor_world_pose.Rot().Y()), static_cast<float>(sensor_world_pose.Rot().Z()), static_cast<float>(sensor_world_pose.Rot().W()));
 
-          render_depth(this->rt_depth_camera, this->rt_scene, this->rt_runtime, view_matrix);
+          ImageData ImageData = render_depth(this->rt_depth_camera, this->rt_scene, this->rt_runtime, view_matrix);
           free_view_matrix(view_matrix);
           gzdbg << "[WGPURtSensor] Rendered from custom sensor [" << sensor->Name() << "]" << std::endl;
+
+          gz::msgs::Image msg;
+          msg.set_width(ImageData.width);
+          msg.set_height(ImageData.height);
+          msg.set_pixel_format_type(gz::msgs::PixelFormatType::L_INT16);
+          msg.set_step(ImageData.width * sizeof(uint16_t));
+          msg.set_data(ImageData.ptr, ImageData.len * sizeof(uint16_t));
+
+          // Set header timestamp
+          *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(_info.simTime);
+          // Set frame_id to sensor name
+          auto frame = msg.mutable_header()->add_data();
+          frame->set_key("frame_id");
+          frame->add_value(sensor->Name());
+
+          // Publish the message
+          publisher_it->second.Publish(msg);
+          gzdbg << "[WGPURtSensor] Published image for sensor [" << sensor->Name() << "] to topic [" << sensor->TopicName() << "]" << std::endl;
+
+          free_image_data(ImageData.ptr, ImageData.len);
         }
         else
         {

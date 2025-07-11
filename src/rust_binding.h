@@ -62,7 +62,16 @@ struct RtDepthCamera;
 
 RtDepthCamera* create_rt_depth_camera(RtRuntime* rt_runtime, size_t width, size_t height, float fov);
 
-void render_depth(RtDepthCamera* rt_depth_camera, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
+struct ImageData {
+  uint16_t* ptr;
+  size_t len;
+  uint32_t width;
+  uint32_t height;
+};
+
+ImageData render_depth(RtDepthCamera* rt_depth_camera, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
+
+void free_image_data(uint16_t* ptr, size_t len);
 
 void free_rt_depth_camera(RtDepthCamera* rt_depth_camera);
 }

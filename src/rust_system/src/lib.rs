@@ -210,7 +210,7 @@ pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
 #[repr(C)]
 pub struct RtScene {
     scene: wgpu_rt_lidar::RayTraceScene,
-    rec: rerun::RecordingStream
+    //rec: rerun::RecordingStream
 }
 
 #[no_mangle]
@@ -235,7 +235,7 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
             &builder.instances));
     Box::into_raw(Box::new(RtScene {
         scene,
-        rec: rerun::RecordingStreamBuilder::new("debug_viz").spawn().unwrap()
+        //rec: rerun::RecordingStreamBuilder::new("debug_viz").spawn().unwrap()
     }))
 }
 
@@ -310,8 +310,16 @@ pub extern "C" fn create_rt_depth_camera(runtime: *mut RtRuntime, width: u32, he
     }))
 }
 
+#[repr(C)]
+pub struct ImageData {
+    pub ptr: *mut u16,
+    pub len: usize,
+    pub width: u32,
+    pub height: u32,
+}
+
 #[no_mangle]
-pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) {
+pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> ImageData{
     let camera = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -333,14 +341,14 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     };
     let start_time = Instant::now();
 
-    scene.scene.visualize(&scene.rec);
+    //scene.scene.visualize(&scene.rec);
     let res = futures::executor::block_on(camera.camera.render_depth_camera(&scene.scene, &runtime.device, &runtime.queue, view.view.inverse()));
-    let width = camera.camera.width() as usize;
-    let height = camera.camera.height() as usize;
+    let width = camera.camera.width() as u32;
+    let height = camera.camera.height() as u32;
     let converted_data: Vec<u16> = res.iter()
         .map(|x| (x * 1000.0) as u16)
         .collect();
-    let image = ndarray::Array::from_shape_vec((height, width).f(), converted_data)
+/*    let image = ndarray::Array::from_shape_vec((height, width).f(), converted_data)
         .expect("Shape mismatch");
 
     let depth_image = rerun::DepthImage::try_from(image)
@@ -350,9 +358,28 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     scene.rec.log("depth_cloud", &depth_image);
 
     let elapsed = start_time.elapsed();
-    println!("Render time: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
-    //println!("{:?}", res.iter().fold(0.0, |acc, x| x.w.max(acc))
+    println!("Render time for rerun: {:.2}ms", elapsed.as_secs_f64() * 1000.0);*/
+    let mut boxed_data = converted_data.into_boxed_slice();
+    let data_ptr = boxed_data.as_mut_ptr();
+    let data_len = boxed_data.len();
+    std::mem::forget(boxed_data); // Prevent Rust from deallocating the memory
+
+    let elapsed2 = start_time.elapsed();
+    println!("Render time for transport: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
+
+    // Return the image data struct
+    ImageData { ptr: data_ptr, len: data_len, width, height }
     
+}
+
+#[no_mangle]
+pub extern "C" fn free_image_data(ptr: *mut u16, len: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(std::slice::from_raw_parts_mut(ptr, len)));
+    }
 }
 
 #[no_mangle]

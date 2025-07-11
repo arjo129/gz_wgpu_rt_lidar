@@ -70,6 +70,7 @@
           <pose>0 0 0.1 0 0 0</pose>
           <always_on>1</always_on>
           <update_rate>10</update_rate>
+          <topic>/my_robot/camera/depth_image</topic>
           <gz:rt_camera>
             <fov>1.047</fov>
           </gz:rt_camera>
