@@ -373,12 +373,12 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
 }
 
 #[no_mangle]
-pub extern "C" fn free_image_data(ptr: *mut u16, len: usize) {
-    if ptr.is_null() {
+pub extern "C" fn free_image_data(image_data: ImageData) {
+    if image_data.ptr.is_null() {
         return;
     }
     unsafe {
-        drop(Box::from_raw(std::slice::from_raw_parts_mut(ptr, len)));
+        drop(Box::from_raw(std::slice::from_raw_parts_mut(image_data.ptr, image_data.len)));
     }
 }
 

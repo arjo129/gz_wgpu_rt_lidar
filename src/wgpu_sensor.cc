@@ -14,8 +14,8 @@
 #include <gz/common/MeshManager.hh>
 #include <gz/common/SubMesh.hh>
 
-#include <gz/transport/Node.hh>
 #include <gz/msgs/image.pb.h>
+#include <gz/transport/Node.hh>
 
 #include <gz/common/StringUtils.hh>
 
@@ -429,9 +429,8 @@ namespace wgpu_sensor
 
           // Publish the message
           publisher_it->second.Publish(msg);
-          gzdbg << "[WGPURtSensor] Published image for sensor [" << sensor->Name() << "] to topic [" << sensor->TopicName() << "]" << std::endl;
 
-          free_image_data(ImageData.ptr, ImageData.len);
+          free_image_data(ImageData);
         }
         else
         {

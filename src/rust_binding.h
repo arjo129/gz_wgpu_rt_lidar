@@ -71,7 +71,7 @@ struct ImageData {
 
 ImageData render_depth(RtDepthCamera* rt_depth_camera, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
 
-void free_image_data(uint16_t* ptr, size_t len);
+void free_image_data(ImageData image_data);
 
 void free_rt_depth_camera(RtDepthCamera* rt_depth_camera);
 }
