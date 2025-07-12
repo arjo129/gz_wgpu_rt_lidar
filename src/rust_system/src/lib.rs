@@ -433,6 +433,28 @@ impl Rt3DLidarConfiguration {
 }
 
 #[repr(C)]
+struct PointCloud
+{
+    points: *mut f32,
+    length: usize
+}
+
+#[no_mangle]
+fn free_pointcloud(ptr: *mut PointCloud) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let point_cloud = Box::from_raw(ptr);
+        // Free the points array
+        if !point_cloud.points.is_null() {
+            let _ = Vec::from_raw_parts(point_cloud.points, point_cloud.length, point_cloud.length);
+        }
+        drop(point_cloud);
+    }
+}
+
+#[repr(C)]
 struct RtLidar{
     lidar: wgpu_rt_lidar::lidar::Lidar
 }
@@ -458,7 +480,7 @@ pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt
 }
 
 #[no_mangle]
-pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) {
+pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> PointCloud{
     let lidar = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -479,14 +501,18 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
         &mut *view
     };
 
-    scene.scene.visualize(&scene.rec);
-    let res = futures::executor::block_on(lidar.lidar.render_lidar_beams(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
+    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_beams(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
     
-    let points: Vec<[f32; 3]> = res.chunks(4).map(|chunk| [chunk[0], chunk[1], chunk[2]]).collect();
-    //let intensities: Vec<f32> = res.chunks(4).map(|chunk| chunk[3]).collect();
 
-    let points3d = rerun::Points3D::new(points);
-    scene.rec.log("lidar_points", &points3d);
+    let point_cloud = PointCloud {
+        points: res.as_mut_ptr(),
+        length: res.len(),
+    };
+
+    // Prevent the vector from being deallocated
+    std::mem::forget(res);
+
+    point_cloud
 }
 
 #[no_mangle]

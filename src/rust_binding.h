@@ -5,30 +5,20 @@
 
 extern "C" {
 
-/// @brief Opaque structure representing a mesh.
 struct Mesh;
 
-/// @brief Create a new mesh
-/// @return a mesh
 Mesh* create_mesh();
 
-/// @brief Free a mesh
-/// @param mesh 
 void free_mesh(Mesh* mesh);
 
-/// @brief Add a vertex to the mesh
 void add_mesh_vertex(Mesh* mesh, float x, float y, float z);
 
-/// @brief Add a normal to the mesh
 void add_mesh_face(Mesh* mesh, uint16_t);
 
-/// @brief Opaque structure representing an instance wrapper.
 struct InstanceWrapper;
 
-/// @brief Create a new instance wrapper
 InstanceWrapper* create_instance_wrapper(size_t index, float x, float y, float z, float qx, float qy, float qz, float qw);
 
-/// @brief Set the mesh of the instance wrapper
 void free_instance_wrapper(InstanceWrapper* instance_wrapper);
 
 struct RtSceneBuilder;
@@ -91,4 +81,15 @@ Rt3DLidarConfiguration* new_lidar_config(
 );
 
 void free_lidar_config(Rt3DLidarConfiguration* config);
+
+struct RtLidar;
+
+RtLidar* create_rt_lidar(
+    RtRuntime* rt_runtime,
+    Rt3DLidarConfiguration* config
+);
+
+void render_lidar(RtLidar* rt_lidar, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
+
+void free_rt_lidar(RtLidar* rt_lidar);
 }
