@@ -99,5 +99,5 @@ RtPointCloud render_lidar(
 
 void free_rt_lidar(RtLidar* rt_lidar);
 
-void free_point_cloud(RtPointCloud* rt_point_cloud);
+void free_pointcloud(RtPointCloud* rt_point_cloud);
 }
