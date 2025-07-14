@@ -433,14 +433,14 @@ impl Rt3DLidarConfiguration {
 }
 
 #[repr(C)]
-struct PointCloud
+struct RtPointCloud
 {
     points: *mut f32,
     length: usize
 }
 
 #[no_mangle]
-fn free_pointcloud(ptr: *mut PointCloud) {
+fn free_pointcloud(ptr: *mut RtPointCloud) {
     if ptr.is_null() {
         return;
     }
@@ -480,7 +480,7 @@ pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt
 }
 
 #[no_mangle]
-pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> PointCloud{
+pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> RtPointCloud{
     let lidar = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -504,7 +504,7 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     let mut res = futures::executor::block_on(lidar.lidar.render_lidar_beams(&scene.scene, &runtime.device, &runtime.queue, &Affine3A::from_mat4(view.view.inverse())));
     
 
-    let point_cloud = PointCloud {
+    let point_cloud = RtPointCloud {
         points: res.as_mut_ptr(),
         length: res.len(),
     };

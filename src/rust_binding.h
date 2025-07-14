@@ -82,6 +82,11 @@ Rt3DLidarConfiguration* new_lidar_config(
 
 void free_lidar_config(Rt3DLidarConfiguration* config);
 
+struct RtPointCloud {
+    float* points;
+    size_t num_points;
+};
+
 struct RtLidar;
 
 RtLidar* create_rt_lidar(
@@ -89,7 +94,10 @@ RtLidar* create_rt_lidar(
     Rt3DLidarConfiguration* config
 );
 
-void render_lidar(RtLidar* rt_lidar, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
+RtPointCloud render_lidar(
+    RtLidar* rt_lidar, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
 
 void free_rt_lidar(RtLidar* rt_lidar);
+
+void free_point_cloud(RtPointCloud* rt_point_cloud);
 }
