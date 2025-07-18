@@ -4,6 +4,7 @@
 #include <gz/math/Pose3.hh>
 #include <string>
 #include <sdf/Sensor.hh>
+#include <cmath>
 
 namespace rtsensor
 {
@@ -40,11 +41,11 @@ namespace rtsensor
     /// \brief Get the sensor type.
     public: SensorType Type() const;
 
-    /// \brief Get the Field of View (FOV) configured for the sensor.
-    public: double FOV() const;
+    /// \brief Configure the sensor for lidar-specific parameters.
+    private: void LidarConfig(const sdf::ElementPtr &_sdf);
 
-    /// \brief Topic name for publishing sensor data.
-    private: std::string topic;
+    /// \brief Configure the sensor for camera-specific parameters.
+    private: void CameraConfig(const sdf::ElementPtr &_sdf);
 
     /// \brief Get the topic name for this sensor.
     public: const std::string& TopicName() const;
@@ -61,10 +62,47 @@ namespace rtsensor
     /// \brief Current sensor pose in world coordinates.
     private: gz::math::Pose3d currentPose{gz::math::Pose3d::Zero};
 
-    /// \brief Field of View for the sensor (camera or lidar).
-    private: double fov{1.047}; // Default FOV (approx 60 degrees)
-
     /// \brief The name of the parent entity (model or link) this sensor is attached to.
     private: std::string parentEntityName;
+
+    /// \brief Configuration parameters for the sensor.
+    public: struct Config
+    {
+      std::string topic;
+      double updateRate{20.0};
+      bool alwaysOn{true};
+      bool visualize{false};
+
+      // LiDAR specific
+      struct {
+        size_t num_lasers{16};
+        size_t num_steps{720};
+        double min_vertical_angle{-M_PI};
+        double max_vertical_angle{M_PI};
+        double step_vertical_angle{4.0};
+        double min_horizontal_angle{-M_PI};
+        double max_horizontal_angle{M_PI};
+        double step_horizontal_angle{4.0};
+        double min_range{0.1};
+        double max_range{100.0};
+      } lidar;
+
+      // Camera specific
+      struct {
+        unsigned int width{256};
+        unsigned int height{256};
+        double horizontalFov{60.0};
+        double verticalFov{60.0};
+        double nearClip{0.1};
+        double farClip{100.0};
+      } camera;
+
+      // Noise configuration
+      struct {
+        std::string type{"gaussian"};
+        double mean{0.0};
+        double stddev{0.01};
+      } noise;
+    } config;
   };
 }

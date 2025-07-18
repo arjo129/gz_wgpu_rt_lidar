@@ -72,7 +72,15 @@
           <update_rate>10</update_rate>
           <topic>/my_robot/camera/depth_image</topic>
           <gz:rt_camera>
-            <fov>1.047</fov>
+            <image>
+              <width>256</width>
+              <height>256</height>
+            </image>
+            <camera>
+              <horizontal_fov>59.0</horizontal_fov>
+              <near>0.01</near>
+              <far>100</far>
+            </camera>
           </gz:rt_camera>
         </sensor>
       </link>
