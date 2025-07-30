@@ -39,8 +39,8 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
-    <model name="camera">
-      <pose>0 0 6.0 0 0 0</pose>
+    <model name="lidar">
+      <pose>0 0 4.0 0 0 0</pose>
       <static>true</static>
       <link name="link">
         <collision name="collision">
@@ -66,24 +66,36 @@
         </visual>
 
         <!-- Custom Camera Sensor -->
-        <sensor name="my_rt_camera" type="custom" gz:type="rt_camera">
-          <pose>0 0 0.1 0 0 0</pose>
-          <always_on>1</always_on>
-          <update_rate>10</update_rate>
-          <topic>/my_robot/camera/depth_image</topic>
-          <visualize>0</visualize>
-          <gz:rt_camera>
-            <image>
-              <width>256</width>
-              <height>256</height>
-            </image>
-            <camera>
-              <horizontal_fov>59.0</horizontal_fov>
-              <near>0.01</near>
-              <far>100</far>
-            </camera>
-          </gz:rt_camera>
-        </sensor>
+        <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+              <always_on>1</always_on>
+              <update_rate>10</update_rate>
+              <topic>/my_robot/lidar/points</topic>
+              <gz:rt_lidar>
+                <scan>
+                  <lasers>5</lasers>
+                  <steps>256</steps>
+                  <vertical>
+                    <min_angle>-0.5</min_angle>
+                    <max_angle>0.5</max_angle>
+                    <step>0.1</step>
+                  </vertical>
+                  <horizontal>
+                    <min_angle>-3.14</min_angle>
+                    <max_angle>3.14</max_angle>
+                    <step>0.01</step>
+                  </horizontal>
+                </scan>
+                <range>
+                  <min>0.1</min>
+                  <max>100.0</max>
+                </range>
+                <noise>
+                  <type>gaussian</type>
+                  <mean>0.0</mean>
+                  <stddev>0.01</stddev>
+                </noise>
+              </gz:rt_lidar>
+            </sensor>
       </link>
     </model>
 
@@ -131,7 +143,7 @@
         <collision name="box_collision">
           <geometry>
             <box>
-              <size>1 1 1</size>
+              <size>2 2 2</size>
             </box>
           </geometry>
         </collision>
@@ -139,7 +151,7 @@
         <visual name="box_visual">
           <geometry>
             <box>
-              <size>1 1 1</size>
+              <size>2 2 2</size>
             </box>
           </geometry>
           <material>

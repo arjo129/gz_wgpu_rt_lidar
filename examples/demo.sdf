@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.11">
-  <world name="shapes">
+  <world name="demo">
 
     <plugin
       filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor"/>
@@ -40,9 +40,9 @@
     </light>
 
     <model name="camera">
-      <pose>0 0 6.0 0 0 0</pose>
+      <pose>0 0 8 0 0 0</pose>
       <static>true</static>
-      <link name="link">
+      <link name="link2">
         <collision name="collision">
           <geometry>
             <plane>
@@ -67,11 +67,10 @@
 
         <!-- Custom Camera Sensor -->
         <sensor name="my_rt_camera" type="custom" gz:type="rt_camera">
-          <pose>0 0 0.1 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <always_on>1</always_on>
           <update_rate>10</update_rate>
           <topic>/my_robot/camera/depth_image</topic>
-          <visualize>0</visualize>
           <gz:rt_camera>
             <image>
               <width>256</width>
@@ -83,6 +82,55 @@
               <far>100</far>
             </camera>
           </gz:rt_camera>
+        </sensor>
+      </link>
+    </model>
+
+    <model name="lidar">
+      <pose>0 0 1.0 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.1 0.1 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+          </material>
+        </visual>
+
+        <!-- Custom Lidar Sensor -->
+        <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <topic>/my_robot/lidar/points</topic>
+          <gz:rt_lidar>
+            <scan>
+              <lasers>16</lasers>
+              <steps>360</steps>
+              <vertical>
+                <min_angle>-0.2617</min_angle>
+                <max_angle>0.2617</max_angle>
+                <step>0.1</step>
+              </vertical>
+              <horizontal>
+                <min_angle>-3.1415</min_angle>
+                <max_angle>3.1415</max_angle>
+                <step>0.01</step>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>100.0</max>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </gz:rt_lidar>
         </sensor>
       </link>
     </model>
@@ -106,16 +154,16 @@
             </plane>
           </geometry>
           <material>
-            <ambient>0.8 0.8 0.8 1</ambient>
-            <diffuse>0.8 0.8 0.8 1</diffuse>
-            <specular>0.8 0.8 0.8 1</specular>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
           </material>
         </visual>
       </link>
     </model>
 
-    <model name="box">
-      <pose>0 0 0.8 0 0 0</pose>
+    <model name="box_blue">
+      <pose>5 0 2 0 0 0</pose>
       <link name="box_link">
         <inertial>
           <inertia>
@@ -131,7 +179,7 @@
         <collision name="box_collision">
           <geometry>
             <box>
-              <size>1 1 1</size>
+              <size>1 20 4</size>
             </box>
           </geometry>
         </collision>
@@ -139,13 +187,77 @@
         <visual name="box_visual">
           <geometry>
             <box>
-              <size>1 1 1</size>
+              <size>1 20 4</size>
             </box>
+          </geometry>
+          <material>
+            <ambient>0 0 1 1</ambient>
+            <diffuse>0 0 1 1</diffuse>
+            <specular>0 0 1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <model name="hatchback_red">
+      <static>true</static>
+      <pose>0 -5 0 0 0 1.570796</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <scale>0.0254 0.0254 0.0254</scale>
+              <uri>meshes/hatchback.obj</uri>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <scale>0.0254 0.0254 0.0254</scale>
+              <uri>meshes/hatchback.obj</uri>
+            </mesh>
           </geometry>
           <material>
             <ambient>1 0 0 1</ambient>
             <diffuse>1 0 0 1</diffuse>
             <specular>1 0 0 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="hatchback_blue">
+      <pose>3 1 0 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <inertial>
+          <mass>1200</mass>
+          <inertia>
+            <ixx>1000</ixx>
+            <iyy>1000</iyy>
+            <izz>1000</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>meshes/hatchback.obj</uri>
+              <scale>0.0254 0.0254 0.0254</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>meshes/hatchback.obj</uri>
+              <scale>0.0254 0.0254 0.0254</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0 0 1 1</ambient>
+            <diffuse>0 0 1 1</diffuse>
+            <specular>0 0 1 1</specular>
           </material>
         </visual>
       </link>

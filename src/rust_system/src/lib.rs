@@ -1,7 +1,7 @@
-use glam::{Affine3A, Mat3A, Quat, Vec3A};
+use glam::{Affine3A, Mat3A, Quat, Vec3A, Vec3};
 use ndarray::ShapeBuilder;
 use wgpu::Device;
-use wgpu_rt_lidar::{utils::get_raytracing_gpu, vertex, AssetMesh, Instance, Vertex};
+use wgpu_rt_lidar::{utils::get_raytracing_gpu,lidar::Lidar, vertex, AssetMesh, Instance, Vertex};
 use std::time::Instant;
 
 #[no_mangle]
@@ -210,7 +210,7 @@ pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
 #[repr(C)]
 pub struct RtScene {
     scene: wgpu_rt_lidar::RayTraceScene,
-    //rec: rerun::RecordingStream
+    rec: rerun::RecordingStream
 }
 
 #[no_mangle]
@@ -225,6 +225,9 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
         &mut *builder
     };
 
+    let rec = rerun::RecordingStreamBuilder::new("debug_viz")
+      .spawn()
+      .unwrap();
     let scene = 
      futures::executor::block_on(
         wgpu_rt_lidar::RayTraceScene::new(
@@ -235,7 +238,7 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
             &builder.instances));
     Box::into_raw(Box::new(RtScene {
         scene,
-        //rec: rerun::RecordingStreamBuilder::new("debug_viz").spawn().unwrap()
+        rec
     }))
 }
 
@@ -255,6 +258,8 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
     };
     println!("Setting transforms {:?}", updates.updates);
     futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
+
+    scene.scene.visualize(&scene.rec);
 }
 
 #[no_mangle]
@@ -391,4 +396,179 @@ pub extern "C" fn free_rt_depth_camera(ptr: *mut RtDepthCamera)
     unsafe {
         drop(Box::from_raw(ptr));
     }
-} 
+}
+
+struct Rt3DLidarConfiguration {
+    num_lasers: usize,
+    min_vertical_angle: f32,
+    max_vertical_angle: f32,
+    step_vertical_angle: f32,
+    min_horizontal_angle: f32,
+    max_horizontal_angle: f32,
+    step_horizontal_angle: f32,
+    num_steps: usize
+}
+
+#[no_mangle]
+fn new_lidar_config(
+    num_lasers: usize,
+    num_steps: usize,
+    min_vertical_angle: f32,
+    max_vertical_angle: f32,
+    step_vertical_angle: f32,
+    min_horizontal_angle: f32,
+    max_horizontal_angle: f32,
+    step_horizontal_angle: f32
+) -> *mut Rt3DLidarConfiguration {
+    Box::into_raw(Box::new(Rt3DLidarConfiguration {
+        num_lasers,
+        min_vertical_angle,
+        max_vertical_angle,
+        step_vertical_angle,
+        min_horizontal_angle,
+        max_horizontal_angle,
+        step_horizontal_angle,
+        num_steps: num_steps
+    }))
+}
+
+#[no_mangle]
+fn free_lidar_config(ptr: *mut Rt3DLidarConfiguration) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(ptr));
+    }
+}
+
+impl Rt3DLidarConfiguration {
+    fn to_individual_beam_directions(&self) -> Vec<glam::Vec3> {
+        let mut directions = Vec::new();
+        for i in 0..self.num_lasers {
+            let vertical_angle = self.min_vertical_angle + i as f32 * self.step_vertical_angle;
+            for j in 0..self.num_steps {
+                let horizontal_angle = self.min_horizontal_angle + j as f32 * self.step_horizontal_angle;
+                let direction = glam::Vec3::new(
+                    vertical_angle.cos() * horizontal_angle.cos(),
+                    vertical_angle.cos() * horizontal_angle.sin(),
+                    vertical_angle.sin()
+                );
+                directions.push(direction);
+                //println!("length: {}", direction.length());
+            }
+        }
+        println!("length: {}", directions.len());
+        directions
+    }
+}
+
+#[repr(C)]
+struct RtPointCloud
+{
+    points: *mut f32,
+    length: usize
+}
+
+#[no_mangle]
+fn free_pointcloud(ptr: *mut RtPointCloud) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let point_cloud = &*ptr;
+        // Free the points array
+        if !point_cloud.points.is_null() {
+            let _ = Vec::from_raw_parts(point_cloud.points, point_cloud.length, point_cloud.length);
+        }
+    }
+}
+
+#[repr(C)]
+struct RtLidar{
+    lidar: wgpu_rt_lidar::lidar::Lidar
+}
+
+#[no_mangle]
+pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt3DLidarConfiguration) -> *mut RtLidar {
+    let runtime = unsafe {
+        assert!(!runtime.is_null());
+        &mut *runtime
+    };
+
+    let lidar_config = unsafe {
+        assert!(!lidar_config.is_null());
+        &mut *lidar_config
+    };
+
+    let beams = lidar_config.to_individual_beam_directions();
+
+    let lidar = wgpu_rt_lidar::lidar::Lidar::new(&runtime.device, beams);
+    Box::into_raw(Box::new(RtLidar {
+        lidar: futures::executor::block_on(lidar)
+    }))
+}
+
+#[no_mangle]
+pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> RtPointCloud{
+    let lidar = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let scene = unsafe {
+        assert!(!scene.is_null());
+        &mut *scene
+    };
+
+    let runtime = unsafe {
+        assert!(!runtime.is_null());
+        &mut *runtime
+    };
+
+    let view = unsafe {
+        assert!(!view.is_null());
+        &mut *view
+    };
+
+    let lidar_pose = Affine3A::from_mat4(view.view);
+
+    let start_time = Instant::now();
+    scene.scene.visualize(&scene.rec);
+    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
+
+    println!("Number of points rendered: {}", res.len());
+    //println!("Points: {:?}", res);
+    let p = res
+      .chunks(4)
+      .filter(|p| p[3] < Lidar::no_hit_const())
+      .map(|p| {
+          lidar_pose
+            .transform_point3(Vec3::new(p[0], p[1], p[2]))
+            .to_array()
+      });
+    lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
+    scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
+
+    let point_cloud = RtPointCloud {
+        points: res.as_mut_ptr(),
+        length: res.len(),
+    };
+    let elapsed = start_time.elapsed();
+    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    // Prevent the vector from being deallocated
+    std::mem::forget(res);
+
+    point_cloud
+}
+
+#[no_mangle]
+pub extern "C" fn free_rt_lidar(ptr: *mut RtLidar)
+{
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(ptr));
+    }
+}

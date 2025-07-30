@@ -60,7 +60,7 @@ void free_view_matrix(ViewMatrix* view_matrix);
 
 struct RtDepthCamera;
 
-RtDepthCamera* create_rt_depth_camera(RtRuntime* rt_runtime, size_t width, size_t height, float fov);
+RtDepthCamera* create_rt_depth_camera(RtRuntime* rt_runtime, uint32_t width, uint32_t height, float fov);
 
 struct ImageData {
   uint16_t* ptr;
@@ -74,4 +74,40 @@ ImageData render_depth(RtDepthCamera* rt_depth_camera, RtScene* rt_scene, RtRunt
 void free_image_data(ImageData image_data);
 
 void free_rt_depth_camera(RtDepthCamera* rt_depth_camera);
+
+struct Rt3DLidarConfiguration;
+
+Rt3DLidarConfiguration* new_lidar_config(
+    size_t num_lasers,
+    size_t num_steps,
+    float min_vertical_angle,
+    float max_vertical_angle,
+    float step_vertical_angle,
+    float min_horizontal_angle,
+    float max_horizontal_angle,
+    float step_horizontal_angle
+	//float min_range,
+    //float max_range
+);
+
+void free_lidar_config(Rt3DLidarConfiguration* config);
+
+struct RtPointCloud {
+  float* points;
+  size_t length;
+};
+
+struct RtLidar;
+
+RtLidar* create_rt_lidar(
+    RtRuntime* rt_runtime,
+    Rt3DLidarConfiguration* config
+);
+
+RtPointCloud render_lidar(
+     RtLidar* rt_lidar, RtScene* rt_scene, RtRuntime* rt_runtime, ViewMatrix* view_matrix);
+
+void free_rt_lidar(RtLidar* rt_lidar);
+
+void free_pointcloud(RtPointCloud* rt_point_cloud);
 }
