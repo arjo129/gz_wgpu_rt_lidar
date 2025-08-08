@@ -1,6 +1,6 @@
 use glam::{Affine3A, Mat3A, Quat, Vec3A, Vec3};
 use ndarray::ShapeBuilder;
-use wgpu::Device;
+use wgpu_rt_lidar::wgpu::{Device, Queue};
 use wgpu_rt_lidar::{utils::get_raytracing_gpu,lidar::Lidar, vertex, AssetMesh, Instance, Vertex};
 use std::time::Instant;
 
@@ -136,13 +136,13 @@ pub extern "C" fn add_instance(ptr: *mut RtSceneBuilder, instance: *mut Instance
 
 #[repr(C)]
 pub struct RtRuntime {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    device: Device,
+    queue: Queue,
 }
 
 impl RtRuntime {
     pub async fn new() -> Self {
-        let instance = wgpu::Instance::default();
+        let instance = wgpu_rt_lidar::wgpu::Instance::default();
         let (_, device, queue) =  get_raytracing_gpu(&instance).await;
 
         println!("Found Raytracing enabled GPU");
