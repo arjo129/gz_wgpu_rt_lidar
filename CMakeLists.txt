@@ -48,7 +48,8 @@ corrosion_import_crate(MANIFEST_PATH src/rust_system/Cargo.toml)
 # Wrapper stuff
 add_library(wgpu_rt_sensor SHARED
   src/wgpu_sensor.cc
-  src/rtsensor.cc)
+  src/rtsensor.cc
+  src/rtmanager.cc)
 
 target_link_libraries(wgpu_rt_sensor PUBLIC
         rust_system

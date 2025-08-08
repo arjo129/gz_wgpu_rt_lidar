@@ -561,4 +561,5 @@ pub extern "C" fn free_rt_lidar(ptr: *mut RtLidar)
     unsafe {
         drop(Box::from_raw(ptr));
     }
+
 }

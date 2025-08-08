@@ -1,34 +1,36 @@
 #include <gz/plugin/Register.hh>
 
-#include <gz/msgs/entity_factory.pb.h>
+//#include <gz/msgs/entity_factory.pb.h>
 
-#include <gz/sim/components/Pose.hh>
-#include <gz/sim/components/Geometry.hh>
-#include <gz/sim/components/Visual.hh>
+//#include <gz/sim/components/Pose.hh>
+//#include <gz/sim/components/Geometry.hh>
+//#include <gz/sim/components/Visual.hh>
 #include <gz/sim/components/CustomSensor.hh>
 #include <gz/sim/components/ParentEntity.hh>
-#include <gz/sim/components/Name.hh>
+//#include <gz/sim/components/Name.hh>
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
-#include <gz/common/MeshManager.hh>
-#include <gz/common/SubMesh.hh>
+//#include <gz/common/MeshManager.hh>
+//#include <gz/common/SubMesh.hh>
 
-#include <gz/msgs/image.pb.h>
+//#include <gz/msgs/image.pb.h>
 #include <gz/transport/Node.hh>
 
-#include <gz/common/StringUtils.hh>
+//#include <gz/common/StringUtils.hh>
 
-#include <sdf/Box.hh>
-#include <sdf/Plane.hh>
-#include <sdf/Sensor.hh>
+//#include <sdf/Box.hh>
+//#include <sdf/Plane.hh>
+//#include <sdf/Sensor.hh>
 #include <unordered_map>
 #include <memory>
-#include <string>
+#include <utility>
+//#include <string>
 
-#include "rust_binding.h"
+//#include "rust_binding.h"
 
 #include "rtsensor.hh"
+#include "rtmanager.hh"
 
 namespace wgpu_sensor
 {
@@ -40,9 +42,9 @@ namespace wgpu_sensor
     public gz::sim::ISystemPostUpdate
   {
     /// \brief Constructor
-    public: WGPURtSensor();
+    //public: WGPURtSensor();
     /// \brief Destructor
-    public: ~WGPURtSensor();
+    //public: ~WGPURtSensor();
 
     // Documentation inherited
     public: void Configure(const gz::sim::Entity &_entity,
@@ -59,303 +61,83 @@ namespace wgpu_sensor
 
     public: void RemoveSensorEntities(const gz::sim::EntityComponentManager &_ecm);
 
-    public: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
+    //public: Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
 
-    RtScene* rt_scene {nullptr};
-    RtRuntime* rt_runtime;
+    //RtScene* rt_scene {nullptr};
+    //RtRuntime* rt_runtime;
     //RtDepthCamera* rt_depth_camera{nullptr};
-    std::unordered_map<size_t, size_t> gz_entity_to_rt_instance;
-    std::chrono::steady_clock::duration last_time;
-    std::unordered_map<gz::sim::Entity, std::shared_ptr<rtsensor::RtSensor>> entitySensorMap;
+    //std::unordered_map<size_t, size_t> gz_entity_to_rt_instance;
+    //std::chrono::steady_clock::duration last_time;
 
-    gz::transport::Node node; // Gazebo Transport Node
-    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> image_publishers; // Map to store publishers per sensor
-    std::unordered_map<gz::sim::Entity, RtDepthCamera*> rt_depth_cameras;
+    private:
+      std::unique_ptr<RTManager> rtManager;
+      std::unordered_map<gz::sim::Entity,
+          std::pair<std::shared_ptr<rtsensor::RtSensor>, gz::transport::Node::Publisher>> entitySensorMap;
 
-    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> pointcloud_publishers; // Map to store Publishers for LiDAR data
-    std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
+
+      gz::transport::Node node; // Gazebo Transport Node
+    //std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> image_publishers; // Map to store publishers per sensor
+    //std::unordered_map<gz::sim::Entity, RtDepthCamera*> rt_depth_cameras;
+
+    //std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> pointcloud_publishers; // Map to store Publishers for LiDAR data
+    //std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
   };
 
-  WGPURtSensor::WGPURtSensor() {}
 
-  WGPURtSensor::~WGPURtSensor()
-  {
-    if (rt_scene != nullptr)
-    {
-      free_rt_scene(rt_scene);
-    }
-    for (auto const& [entityId, rtCameraPtr] : this->rt_depth_cameras)
-    {
-      if (rtCameraPtr != nullptr)
-      {
-          free_rt_depth_camera(rtCameraPtr);
-      }
-    }
-    this->rt_depth_cameras.clear(); // Clear the map
-
-    for (auto const& [entityId, rtLidarPtr] : this->rt_lidars)
-    {
-      if (rtLidarPtr != nullptr)
-      {
-          free_rt_lidar(rtLidarPtr);
-      }
-    }
-    this->rt_lidars.clear(); // Clear the map
-    free_rt_runtime(rt_runtime);
-  }
-
-  Mesh* WGPURtSensor::convertSDFModelToWGPU(const sdf::Geometry& geom)
-  {
-    if (geom.Type() == sdf::GeometryType::BOX)
-    {
-      auto bmesh = geom.BoxShape();
-      auto mesh = create_mesh();
-
-      // TOP
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-
-      // BOTTOM
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-
-      // RIGHT
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-
-      // LEFT
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-
-      // FRONT
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-
-      // BACK
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, -bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-      add_mesh_vertex(mesh, bmesh->Size().X()/2, -bmesh->Size().Y()/2, -bmesh->Size().Z()/2);
-
-      uint16_t indices[] = {
-        0, 1, 2, 2, 3, 0, // top
-        4, 5, 6, 6, 7, 4, // bottom
-        8, 9, 10, 10, 11, 8, // right
-        12, 13, 14, 14, 15, 12, // left
-        16, 17, 18, 18, 19, 16, // front
-        20, 21, 22, 22, 23, 20, // back
-      };
-      for (auto x: indices)
-      {
-        add_mesh_face(mesh, x);
-      }
-      return mesh;
-    }
-    else if (geom.Type() == sdf::GeometryType::PLANE)
-    {
-      auto pmesh = geom.PlaneShape();
-      auto mesh = create_mesh();
-
-      add_mesh_vertex(mesh, -pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
-      add_mesh_vertex(mesh, pmesh->Size().X()/2, -pmesh->Size().Y()/2, 0.0f);
-      add_mesh_vertex(mesh, pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
-      add_mesh_vertex(mesh, -pmesh->Size().X()/2, pmesh->Size().Y()/2, 0.0f);
-
-      uint16_t indices[] = {
-        0, 1, 2,
-        2, 3, 0
-      };
-      for (auto x : indices)
-      {
-        add_mesh_face(mesh, x);
-      }
-
-      return mesh;
-    }
-    else if (geom.Type() == sdf::GeometryType::MESH)
-    {
-      auto mesh_shape = geom.MeshShape();
-      auto mesh = create_mesh();
-
-      if (!mesh_shape)
-      {
-        gzerr << "Failed to get MeshShape from geometry." << std::endl;
-        return nullptr;
-      }
-
-      const std::string &uri = mesh_shape->Uri();
-      const gz::common::Mesh *mesh_data = gz::common::MeshManager::Instance()->Load(uri);
-      if (!mesh_data)
-      {
-        gzerr << "Failed to load mesh from URI: " << uri << std::endl;
-        return nullptr;
-      }
-      if (!mesh)
-      {
-        gzerr << "Failed to create_mesh for MESH." << std::endl;
-        return nullptr;
-      }
-
-      const gz::math::Vector3d scale = mesh_shape->Scale();
-      // 0 scale error?
-
-      // uint16_t might overflow
-      uint16_t vertex_offset = 0;
-
-      for (unsigned int i = 0; i < mesh_data->SubMeshCount(); ++i)
-      {
-        auto submesh_weak = mesh_data->SubMeshByIndex(i);
-        auto submesh_locked = submesh_weak.lock();
-        if (!submesh_locked) continue;
-        const gz::common::SubMesh *submesh = submesh_locked.get();
-
-        // Add vertices (scaled)
-        for (unsigned int v = 0; v < submesh->VertexCount(); ++v)
-        {
-          const auto &vertex = submesh->Vertex(v);
-          add_mesh_vertex(mesh,
-            static_cast<float>(vertex.X() * scale.X()),
-            static_cast<float>(vertex.Y() * scale.Y()),
-            static_cast<float>(vertex.Z() * scale.Z()));
-        }
-
-        // Add indices with offset
-        for (unsigned int x = 0; x < submesh->IndexCount(); ++x)
-        {
-          uint16_t index = submesh->Index(x) + vertex_offset;
-          add_mesh_face(mesh, index);
-        }
-
-        vertex_offset += submesh->VertexCount();
-      }
-
-      return mesh;
-    }
-
-    return nullptr;
-  }
 
   void WGPURtSensor::Configure(const gz::sim::Entity &_entity,
                                const std::shared_ptr<const sdf::Element> &_sdf,
                                gz::sim::EntityComponentManager &_ecm,
                                gz::sim::EventManager &_eventMgr)
   {
-    gzmsg << "WGPURtSensor::Configure" << std::endl;
-    this->rt_runtime = create_rt_runtime();
+    //gzmsg << "WGPURtSensor::Configure" << std::endl;
+    //this->rt_runtime = create_rt_runtime();
     //this->rt_depth_camera = create_rt_depth_camera(this->rt_runtime, 256, 256, 59.0);
+    this->rtManager = std::make_unique<RTManager>();
+    this->rtManager->Initialize();
   }
 
   void WGPURtSensor::PreUpdate(const gz::sim::UpdateInfo &_info,
                                gz::sim::EntityComponentManager &_ecm)
   {
-    // Detect new custom sensors and create RtSensor instances for them
     _ecm.EachNew<gz::sim::components::CustomSensor,
                  gz::sim::components::ParentEntity>(
       [&](const gz::sim::Entity &_entity,
           const gz::sim::components::CustomSensor *_custom,
           const gz::sim::components::ParentEntity *_parent) -> bool
       {
-        // Get the sensor's scoped name (e.g., "world_name::model_name::link_name::sensor_name")
-        // Remove world scope for cleaner names if needed for internal logic
-        auto sensorScopedName = gz::sim::removeParentScope(
-            gz::sim::scopedName(_entity, _ecm, "::", false), "::");
         sdf::Sensor data = _custom->Data();
-        data.SetName(sensorScopedName); // Ensure SDF data has the correct name
 
-        // If the sensor topic is not explicitly set in SDF, generate a default one
         if (data.Topic().empty())
         {
-          std::string topic = gz::sim::scopedName(_entity, _ecm) + "/rt_sensor";
-          data.SetTopic(topic);
+          data.SetTopic(gz::sim::scopedName(_entity, _ecm) + "/rt_sensor");
         }
 
-        // Create an instance of our custom RtSensor
         auto sensor = std::make_shared<rtsensor::RtSensor>();
+
         if (!sensor->Load(data))
         {
-          gzerr << "[WGPURtSensor] Failed to load RtSensor for entity ["
-                << _entity << "] with name [" << sensorScopedName << "]" << std::endl;
-          return false;
+          gzerr << "Failed to load RtSensor for entity [" << _entity << "]" << std::endl;
+          return true;
         }
-
-        // Set the parent entity name on the RtSensor instance for later pose lookup
-        /*auto parentNameComp = _ecm.Component<gz::sim::components::Name>(_parent->Data());
-        if (parentNameComp)
-        {
-          sensor->SetParentEntityName(parentNameComp->Data());
-        }
-        else
-        {
-          gzerr << "[WGPURtSensor] Parent entity name not found for sensor entity [" << _entity << "]" << std::endl;
-        }*/
         sensor->SetParentEntity(_parent->Data());
 
+        this->rtManager->CreateSensorRenderer(_entity, sensor);
+
+        gz::transport::Node::Publisher pub;
         if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
         {
-          this->rt_depth_cameras[_entity] = create_rt_depth_camera(
-              this->rt_runtime,
-              sensor->config.camera.width,
-              sensor->config.camera.height,
-              static_cast<float>(sensor->config.camera.horizontalFov)
-              //static_cast<float>(sensor->config.camera.verticalFov),
-              //static_cast<float>(sensor->config.camera.nearClip),
-              //static_cast<float>(sensor->config.camera.farClip)
-          );
-
-          if (!this->rt_depth_cameras[_entity])
-          {
-            gzerr << "[WGPURtSensor] Failed to create RtDepthCamera for sensor [" << sensor->Name() << "]." << std::endl;
-            return false;
-          }
-
-          this->image_publishers[_entity] = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
-          gzmsg << "[WGPURtSensor] Advertising image topic [" << sensor->TopicName()
-                << "] for sensor [" << sensor->Name() << "]" << std::endl;
+            pub = this->node.Advertise<gz::msgs::Image>(sensor->TopicName());
         }
-
         else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
         {
-          Rt3DLidarConfiguration* lidarConfig = new_lidar_config(
-              sensor->config.lidar.num_lasers,
-              sensor->config.lidar.num_steps,
-              static_cast<float>(sensor->config.lidar.min_vertical_angle),
-              static_cast<float>(sensor->config.lidar.max_vertical_angle),
-              static_cast<float>(sensor->config.lidar.step_vertical_angle),
-              static_cast<float>(sensor->config.lidar.min_horizontal_angle),
-              static_cast<float>(sensor->config.lidar.max_horizontal_angle),
-              static_cast<float>(sensor->config.lidar.step_horizontal_angle));
-              //static_cast<float>sensor->config.lidar.min_range,
-              //static_cast<float>sensor->config.lidar.max_range);
-
-          this->rt_lidars[_entity] = create_rt_lidar(this->rt_runtime, lidarConfig);
-          if (!this->rt_lidars[_entity])
-          {
-            gzerr << "[WGPURtSensor] Failed to create RtLidar for sensor [" << sensor->Name() << "]." << std::endl;
-            return false;
-          }
-
-          this->pointcloud_publishers[_entity] = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
-          gzmsg << "[WGPURtSensor] Advertising point cloud topic [" << sensor->TopicName()
-                << "] for sensor [" << sensor->Name() << "]" << std::endl;
-
-          free_lidar_config(lidarConfig);
+            pub = this->node.Advertise<gz::msgs::PointCloudPacked>(sensor->TopicName());
         }
+        this->entitySensorMap[_entity] = std::make_pair(sensor, pub);
 
-        this->entitySensorMap.insert(std::make_pair(_entity, std::move(sensor)));
-        gzmsg << "[WGPURtSensor] Registered new custom sensor for entity ["
-              << _entity << "] named [" << sensorScopedName << "]" << std::endl;
         return true;
       });
+
   }
 
 
@@ -368,52 +150,24 @@ namespace wgpu_sensor
       return;
     }
 
-    if (this->rt_scene == nullptr)
+    if (!this->rtManager->IsSceneInitialized())
     {
-      auto rt_scene_builder = create_rt_scene_builder();
-      _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
-        ([this, &rt_scene_builder, &_ecm](auto& entity, auto&& visual, auto&& geometry)
-        {
-          auto geom = geometry->Data();
-          auto model = convertSDFModelToWGPU(geom);
-          if (model != nullptr)
-          {
-            auto mesh_id = add_mesh(rt_scene_builder, model);
-            auto pose = _ecm.Component<gz::sim::components::Pose>(entity);
-            if (!pose)
-            {
-              gzmsg << "No pose component found for entity " << entity << std::endl;
-              return true;
-            }
+      this->rtManager->BuildScene(_ecm);
 
-            auto instance = create_instance_wrapper(mesh_id, pose->Data().Pos().X(), pose->Data().Pos().Y(), pose->Data().Pos().Z(), pose->Data().Rot().X(), pose->Data().Rot().Y(), pose->Data().Rot().Z(), pose->Data().Rot().W());
-            auto inst_id = add_instance(rt_scene_builder, instance);
-            free_instance_wrapper(instance);
-            gzerr << "Creating instance " << inst_id << "For entity" <<  entity << "With pose" << pose << std::endl;
-            gz_entity_to_rt_instance[entity] = inst_id;
-            free_mesh(model);
-          }
-          else
-          {
-            gzerr << "Model geometry for" << entity << "  not supported" << std::endl;
-          }
-          return true;
-        });
-      gzerr << "Creating scene" << std::endl;
-      this->rt_scene = create_rt_scene(this->rt_runtime, rt_scene_builder);
-      free_rt_scene_builder(rt_scene_builder);
     }
     else
     {
       bool shouldUpdate = false;
-      for (auto const& [entityId, sensor] : this->entitySensorMap)
+      for (auto const& [entityId, pair] : this->entitySensorMap)
       {
+        auto const& sensor = pair.first;
         auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
         if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
         {
           shouldUpdate = true;
           break;
+
         }
       }
 
@@ -422,197 +176,35 @@ namespace wgpu_sensor
           return; // No sensors need updating, skip
       }
 
-      auto rt_scene_update = create_rt_scene_update();
-      _ecm.Each<gz::sim::components::Visual, gz::sim::components::Geometry>
-        ([this, &rt_scene_update, &_ecm](auto& entity, auto&& visual, auto&& geometry)
-        {
-          auto pose = gz::sim::worldPose(entity, _ecm);
-          auto instance_handle = gz_entity_to_rt_instance.find(entity);
-          if (instance_handle == gz_entity_to_rt_instance.end())
-          {
-            gzwarn << "No instance found for entity " << entity << std::endl;
-            return true;
-          }
-          auto instance =
-            create_instance_wrapper(instance_handle->second,
-              pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z(),
-              pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
+      this->rtManager->UpdateTransforms(_ecm);
 
-          add_update(rt_scene_update, instance, instance_handle->second);
-          free_instance_wrapper(instance);
-          return true;
-        });
-
-      set_transforms(rt_scene, rt_runtime, rt_scene_update);
-
-      for (auto const& [entityId, sensor] : this->entitySensorMap)
-      {
-
-        auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-            std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
-
-   	    // Check if enough time has passed using the sensor's OWN member variable
-        if ((_info.simTime - sensor->lastUpdateTime) < update_period)
-        {
-          continue; // Not time to update yet, skip
-        }
-
-	    // Update the last update time for the sensor
-        sensor->lastUpdateTime = _info.simTime;
-
-        // Find the parent entity's pose to get the sensor's world pose
-        // (assuming the sensor's pose is relative to its parent link/model)
-        /*gz::sim::Entity parentEntity = gz::sim::kNullEntity;
-        _ecm.Each<gz::sim::components::Name>(
-            [&](const gz::sim::Entity &ent, const gz::sim::components::Name *name)
-            {
-                if (name->Data() == sensor->ParentEntityName())
-                {
-                    parentEntity = ent;
-                    return false; // Found, stop iteration
-                }
-                return true;
-            });*/
-        gz::sim::Entity parentEntity = sensor->ParentEntity();
-        if (sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
-        {
-          auto publisher_it = this->image_publishers.find(entityId);
-          auto rtCameraIt = this->rt_depth_cameras.find(entityId);
-          if (rtCameraIt == this->rt_depth_cameras.end() || !rtCameraIt->second) {
-              gzerr << "[WGPURtSensor] No valid RtDepthCamera found for sensor [" << sensor->Name() << "]. Skipping render." << std::endl;
-              continue;
-          }
-          RtDepthCamera* currentRtCamera = rtCameraIt->second;
-          gzmsg << "[WGPURtSensor] Using RtDepthCamera: [" << currentRtCamera << "]" << std::endl;
-          if (parentEntity != gz::sim::kNullEntity)
-          {
-            // Get the world pose of the parent entity
-            auto sensor_world_pose = gz::sim::worldPose(parentEntity, _ecm);
-            auto view_matrix = create_view_matrix(
-              static_cast<float>(sensor_world_pose.Pos().X()), static_cast<float>(sensor_world_pose.Pos().Y()), static_cast<float>(sensor_world_pose.Pos().Z()),
-              static_cast<float>(sensor_world_pose.Rot().X()), static_cast<float>(sensor_world_pose.Rot().Y()), static_cast<float>(sensor_world_pose.Rot().Z()), static_cast<float>(sensor_world_pose.Rot().W()));
-
-            ImageData ImageData = render_depth(currentRtCamera, this->rt_scene, this->rt_runtime, view_matrix);
-            free_view_matrix(view_matrix);
-            gzdbg << "[WGPURtSensor] Rendered from custom CAMERA sensor [" << sensor->Name() << "]" << std::endl;
-
-            gz::msgs::Image msg;
-            msg.set_width(ImageData.width);
-            msg.set_height(ImageData.height);
-            msg.set_pixel_format_type(gz::msgs::PixelFormatType::L_INT16);
-            msg.set_step(ImageData.width * sizeof(uint16_t));
-            msg.set_data(ImageData.ptr, ImageData.len * sizeof(uint16_t));
-
-            // Set header timestamp
-            *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(_info.simTime);
-            // Set frame_id to sensor name
-            auto frame = msg.mutable_header()->add_data();
-            frame->set_key("frame_id");
-            frame->add_value(sensor->Name());
-
-            // Publish the message
-            publisher_it->second.Publish(msg);
-
-            free_image_data(ImageData);
-          }
-          else
-          {
-            gzwarn << "[WGPURtSensor] Could not find parent entity [" << sensor->ParentEntity()
-                   << "] for custom sensor [" << sensor->Name() << "], skipping render." << std::endl;
-          }
-        }
-
-        else if (sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
-        {
-          auto publisher_it = this->pointcloud_publishers.find(entityId);
-          auto rtLidarIt = this->rt_lidars.find(entityId);
-          if (rtLidarIt == this->rt_lidars.end() || !rtLidarIt->second) {
-              gzerr << "[WGPURtSensor] No valid RtLidar found for sensor [" << sensor->Name() << "]. Skipping render." << std::endl;
-              continue;
-          }
-          RtLidar* currentRtLidar = rtLidarIt->second;
-          gzmsg << "[WGPURtSensor] Using RtLidar: [" << currentRtLidar << "]" << std::endl;
-
-          if (parentEntity != gz::sim::kNullEntity)
-          {
-            // Get the world pose of the parent entity
-            auto sensor_world_pose = gz::sim::worldPose(parentEntity, _ecm);
-            auto view_matrix = create_view_matrix(
-              static_cast<float>(sensor_world_pose.Pos().X()), static_cast<float>(sensor_world_pose.Pos().Y()), static_cast<float>(sensor_world_pose.Pos().Z()),
-              static_cast<float>(sensor_world_pose.Rot().X()), static_cast<float>(sensor_world_pose.Rot().Y()), static_cast<float>(sensor_world_pose.Rot().Z()), static_cast<float>(sensor_world_pose.Rot().W()));
-
-            RtPointCloud pointCloudData = render_lidar(currentRtLidar, this->rt_scene, this->rt_runtime, view_matrix);
-            free_view_matrix(view_matrix);
-            gzdbg << "[WGPURtSensor] Rendered from custom LIDAR sensor [" << sensor->Name() << "]" << std::endl;
-
-            gz::msgs::PointCloudPacked msg;
-            *msg.mutable_header()->mutable_stamp() = gz::msgs::Convert(_info.simTime);
-            auto frame = msg.mutable_header()->add_data();
-            frame->set_key("frame_id");
-            frame->add_value(sensor->Name());
-
-            msg.add_field()->set_name("x");
-            msg.add_field()->set_name("y");
-            msg.add_field()->set_name("z");
-            msg.add_field()->set_name("i");
-
-            msg.set_point_step(sizeof(float) * 4);
-
-            msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
-
-            // Publish the message
-            publisher_it->second.Publish(msg);
-
-            // Free the point cloud data
-            free_pointcloud(&pointCloudData);
-          }
-        }
-        else
-        {
-          gzerr << "[WGPURtSensor] Unknown sensor type for entity [" << entityId << "]. Cannot render." << std::endl;
-        }
-      }
-
-      free_rt_scene_update(rt_scene_update); // Free the update object
-    }
-
-    // --- Update Custom Sensors ---
-    if (!_info.paused)
+    for (auto & [entityId, pair] : this->entitySensorMap)
     {
-      for (auto &[entity, sensor] : this->entitySensorMap)
+      auto & sensor = pair.first;
+      auto & publisher = pair.second;
+      auto update_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+          std::chrono::duration<double>(1.0 / sensor->UpdateRate()));
+
+      if ((_info.simTime - sensor->lastUpdateTime) >= update_period)
       {
-        auto baseSensor = std::dynamic_pointer_cast<gz::sensors::Sensor>(sensor);
-        if (baseSensor)
-        {
-          baseSensor->Update(_info.simTime, false); // false to respect update rate
-        }
-        else
-        {
-          sensor->Update(_info.simTime);
-          gzerr << "[WGPURtSensor] Error casting custom sensor to base Sensor class." << std::endl;
-        }
-	  }
+        sensor->lastUpdateTime = _info.simTime;
+        this->rtManager->RenderSensor(entityId, sensor, _info, _ecm, publisher);
+      }
     }
-    // --- Remove Sensors ---
-    this->RemoveSensorEntities(_ecm);
+  }
   }
   void WGPURtSensor::RemoveSensorEntities(
       const gz::sim::EntityComponentManager &_ecm)
   {
-
-    // Iterate over entities that have been removed and clear them from our map
     _ecm.EachRemoved<gz::sim::components::CustomSensor>(
       [&](const gz::sim::Entity &_entity,
-          const gz::sim::components::CustomSensor *) -> bool
+          const auto*) -> bool
       {
-        if (this->entitySensorMap.erase(_entity) == 0)
+        if (this->entitySensorMap.count(_entity))
         {
-          gzerr << "[WGPURtSensor] Internal error: tried to remove RtSensor for entity ["
-                << _entity << "] but it was not found in map." << std::endl;
-        }
-        else
-        {
-          gzmsg << "[WGPURtSensor] Removed RtSensor for entity [" << _entity << "]." << std::endl;
+          this->rtManager->RemoveSensorRenderer(_entity);
+          this->entitySensorMap.erase(_entity);
+          gzmsg << "Removed RtSensor for entity [" << _entity << "]." << std::endl;
         }
         return true;
       });
