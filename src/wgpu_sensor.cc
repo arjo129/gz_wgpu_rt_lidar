@@ -3,6 +3,8 @@
 #include <gz/sim/components/CustomSensor.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/ParentEntity.hh>
+#include <gz/sim/components/Geometry.hh>
+#include <gz/sim/components/Visual.hh>
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
@@ -83,6 +85,30 @@ namespace wgpu_sensor
 
         return true;
       });
+
+    _ecm.EachNew<gz::sim::components::Visual, gz::sim::components::Geometry>(
+      [&](const gz::sim::Entity &_entity, const auto*, const auto*) -> bool
+      {
+        if (this->rtManager->IsSceneInitialized())
+        {
+          gzmsg << "RTManager: New visual entity [" << _entity << "] detected. Marking scene for rebuild." << std::endl;
+          this->rtManager->MarkSceneDirty();
+        }
+        return true;
+      });
+
+    _ecm.EachRemoved<gz::sim::components::Visual>(
+      [&](const gz::sim::Entity &_entity, const auto*) -> bool
+      {
+        if (this->rtManager->IsSceneInitialized())
+        {
+          gzmsg << "RTManager: Visual entity [" << _entity << "] removed. Marking scene for rebuild." << std::endl;
+          this->rtManager->MarkSceneDirty();
+        }
+        return true;
+      });
+
+    //this->RemoveSensorEntities(_ecm);
   }
 
   void WGPURtSensor::PostUpdate(const gz::sim::UpdateInfo &_info,
@@ -97,6 +123,10 @@ namespace wgpu_sensor
     if (!this->rtManager->IsSceneInitialized())
     {
       this->rtManager->BuildScene(_ecm);
+    }
+    else if (this->rtManager->IsSceneDirty())
+    {
+      this->rtManager->RebuildScene(_ecm);
     }
 
     bool shouldUpdate = false;
