@@ -61,4 +61,12 @@ target_link_libraries(wgpu_rt_sensor PUBLIC
 )
 
 install(TARGETS wgpu_rt_sensor DESTINATION lib)
+
+#============================================================================
+# Testing
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
 ament_package()
