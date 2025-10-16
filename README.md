@@ -47,6 +47,13 @@ Important: Before running Gazebo, ensure your system can find the compiled plugi
 ```bash
 source install/setup.bash
 ```
+## Code Quality and Linting
+This project uses `ament_uncrustify` to enforce C++ code style. To check your code:
+```bash
+colcon test --packages-select gz_wgpu_rt_lidar --event-handlers console_direct+
+```
+The uncrustify configuration can be found in `.uncrustify.cfg` in the root of this package.
+
 ## Running the Examples
 After building and sourcing your workspace, you can run an example SDF file:
 ```bash
