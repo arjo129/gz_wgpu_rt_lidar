@@ -143,8 +143,6 @@ impl RtRuntime {
     pub async fn new() -> Self {
         let instance = wgpu_rt_lidar::wgpu::Instance::default();
         let (_, device, queue) =  get_raytracing_gpu(&instance).await;
-
-        println!("Found Raytracing enabled GPU");
         RtRuntime {
             device,
             queue
@@ -447,7 +445,6 @@ impl Rt3DLidarConfiguration {
                 //println!("length: {}", direction.length());
             }
         }
-        println!("length: {}", directions.len());
         directions
     }
 }
@@ -527,7 +524,7 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     let mut res = futures::executor::block_on(
         lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
     let elapsed = start_time.elapsed();
-    println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     //println!("Number of points rendered: {}", res.len());
     //println!("Points: {:?}", res);
     let p = res

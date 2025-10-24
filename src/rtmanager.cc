@@ -176,11 +176,6 @@ void RTManager::RenderLoop()
       f->set_datatype(gz::msgs::PointCloudPacked::Field::FLOAT32);
       f->set_count(1);
 
-
-      /*msg.add_field()->set_name("x");
-      msg.add_field()->set_name("y");
-      msg.add_field()->set_name("z");
-      msg.add_field()->set_name("intensity");*/
       msg.set_point_step(sizeof(float) * 4);
       msg.set_row_step(pointCloudData.length * msg.point_step());
       msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
