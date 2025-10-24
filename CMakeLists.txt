@@ -61,4 +61,15 @@ target_link_libraries(wgpu_rt_sensor PUBLIC
 )
 
 install(TARGETS wgpu_rt_sensor DESTINATION lib)
+
+#============================================================================
+# Install examples
+install(DIRECTORY examples/
+  DESTINATION share/${PROJECT_NAME}/examples)
+
+#============================================================================
+# Install launch files
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch)
+
 ament_package()
