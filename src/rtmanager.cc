@@ -419,3 +419,30 @@ Mesh* RTManager::convertSDFModelToWGPU(const sdf::Geometry& geom)
   }
   return nullptr;
 }
+
+void RTManager::MarkSceneDirty()
+{
+  this->sceneDirty = true;
+}
+
+bool RTManager::IsSceneDirty() const
+{
+  return this->sceneDirty;
+}
+
+void RTManager::RebuildScene(const gz::sim::EntityComponentManager &_ecm)
+{
+  gzmsg << "RTManager: Rebuilding ray-tracing scene due to entity changes." << std::endl;
+
+  this->gz_entity_to_rt_instance.clear();
+
+  if (this->rt_scene != nullptr)
+  {
+    free_rt_scene(this->rt_scene);
+    this->rt_scene = nullptr;
+  }
+
+  this->BuildScene(_ecm);
+
+  this->sceneDirty = false;
+}

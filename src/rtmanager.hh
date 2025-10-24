@@ -62,6 +62,15 @@ namespace wgpu_sensor
     /// \brief Checks if the scene has been built
     bool IsSceneInitialized() const;
 
+    /// \brief Mark the scene as dirty, requiring a rebuild
+    void MarkSceneDirty();
+
+    /// \brief Check if the scene is dirty
+    bool IsSceneDirty() const;
+
+    /// \brief Rebuild the scene (clears and rebuilds from scratch)
+    void RebuildScene(const gz::sim::EntityComponentManager &_ecm);
+
   private:
     /// \brief Converts SDF geometry to a format the Rust backend can use
     Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
@@ -104,5 +113,8 @@ namespace wgpu_sensor
 
     /// \brief Flag tells the thread to stop when we're done
     bool stopThread{false};
+
+    /// \brief Flag indicating if the scene needs to be rebuilt due to entity changes
+    bool sceneDirty = false;
   };
 }
