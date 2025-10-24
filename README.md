@@ -54,6 +54,23 @@ gz sim examples/shapes.sdf
 ```
 This will launch Gazebo Sim with the WGPU raytracing sensors active. You can visualize the sensor output using the built-in Gazebo GUI plugin `Image Display`. Rerun visualization will launch by itself for LiDAR.
 
+### Running with ROS 2 Bridge
+To run the demo example with ROS 2 topics bridged from Gazebo, use the provided launch file:
+```bash
+ros2 launch gz_wgpu_rt_lidar demo_bridge.launch.py
+```
+This will:
+- Launch Gazebo Sim with the demo.sdf world
+- Start ros_gz_bridge nodes to bridge the following topics:
+  - `/my_robot/camera/depth_image` (sensor_msgs/msg/Image)
+  - `/my_robot/lidar/points` (sensor_msgs/msg/PointCloud2)
+
+You can then visualize these topics in RViz2 or any other ROS 2 visualization tool:
+```bash
+ros2 topic list  # Verify topics are available
+rviz2  # Visualize the sensor data
+```
+
 ## Screenshots
 
 Here are some screenshots showcasing the raytraced depth output in the Rerun Viewer:
