@@ -12,6 +12,7 @@
 
 #include <gz/msgs/image.pb.h>
 #include <gz/msgs/pointcloud.pb.h>
+#include <gz/msgs/laserscan.pb.h>
 
 #include <gz/sim/Util.hh>
 
@@ -186,6 +187,80 @@ void RTManager::RenderLoop()
       msg.set_data(pointCloudData.points, pointCloudData.length * sizeof(float));
 
       pubIt->second.Publish(msg);
+
+      auto scanPubIt = this->scanPublishers.find(job.entityId);
+      if (scanPubIt == this->scanPublishers.end() || !scanPubIt->second) return;
+      const float *buf = pointCloudData.points;          // interleaved x,y,z,i
+      const uint32_t floats = pointCloudData.length;     // total floats
+      const uint32_t pts = floats / 4;
+      // Use parsed SDF config directly (no extra struct)
+      const auto &cfg = job.sensor->config.lidar;        // min/max/step/count and ranges
+      const double angle_min  = cfg.min_horizontal_angle;
+      const double angle_max  = cfg.max_horizontal_angle;
+      const double angle_step = cfg.step_horizontal_angle;
+      const double range_min  = cfg.min_range;
+      const double range_max  = cfg.max_range;
+
+      // Number of angular bins
+      const uint32_t bins = static_cast<uint32_t>(
+         std::ceil((angle_max - angle_min) / angle_step));
+
+      gz::msgs::LaserScan scan;
+
+      // Header and frame
+      *scan.mutable_header()->mutable_stamp() = gz::msgs::Convert(job.updateInfo.simTime);
+      scan.set_frame(job.parentFrameId);
+
+      // Optional: world_pose for context
+      auto wp = scan.mutable_world_pose();
+      wp->mutable_position()->set_x(job.sensorWorldPose.Pos().X());
+      wp->mutable_position()->set_y(job.sensorWorldPose.Pos().Y());
+      wp->mutable_position()->set_z(job.sensorWorldPose.Pos().Z());
+      wp->mutable_orientation()->set_x(job.sensorWorldPose.Rot().X());
+      wp->mutable_orientation()->set_y(job.sensorWorldPose.Rot().Y());
+      wp->mutable_orientation()->set_z(job.sensorWorldPose.Rot().Z());
+      wp->mutable_orientation()->set_w(job.sensorWorldPose.Rot().W());
+
+      // Horizontal scan metadata
+      scan.set_angle_min(angle_min);
+      scan.set_angle_max(angle_max);
+      scan.set_angle_step(angle_step);
+      scan.set_count(bins);
+      scan.set_range_min(range_min);
+      scan.set_range_max(range_max);
+
+      // Collapse to single vertical layer for simplicity
+      scan.set_vertical_angle_min(0.0);
+      scan.set_vertical_angle_max(0.0);
+      scan.set_vertical_angle_step(0.0);
+      scan.set_vertical_count(1);
+
+      // Initialize all bins to +inf so nearest wins
+      scan.mutable_ranges()->Resize(bins, std::numeric_limits<double>::infinity());
+      // Optionally: scan.mutable_intensities()->Resize(bins, 0.0);
+
+      for (uint32_t k = 0; k < pts; ++k)
+      {
+        const double x = static_cast<double>(buf[k*4 + 0]);
+        const double y = static_cast<double>(buf[k*4 + 1]);
+        const double r = std::hypot(x, y);
+        if (r < range_min || r > range_max)
+          continue;
+
+        const double a = std::atan2(y, x);
+        if (a < angle_min || a > angle_max)
+          continue;
+
+        const int idx = static_cast<int>(std::floor((a - angle_min) / angle_step));
+        if (idx < 0 || static_cast<uint32_t>(idx) >= bins)
+          continue;
+
+        const double prev = scan.ranges(idx);
+        if (!std::isfinite(prev) || r < prev)
+          scan.set_ranges(idx, r);
+      }
+
+      scanPubIt->second.Publish(scan);
     }
     free_view_matrix(view_matrix);
   }
@@ -288,6 +363,8 @@ void RTManager::CreateSensorRenderer(const gz::sim::Entity &_entity, const std::
   if (_sensor->Type() == rtsensor::RtSensor::SensorType::LIDAR)
   {
     this->publishers[_entity] = this->node.Advertise<gz::msgs::PointCloudPacked>(_sensor->TopicName());
+    auto scanTopic = _sensor->TopicName() + std::string("/scan");
+    this->scanPublishers[_entity] = this->node.Advertise<gz::msgs::LaserScan>(scanTopic);
   }
   else if (_sensor->Type() == rtsensor::RtSensor::SensorType::CAMERA)
   {
@@ -306,6 +383,7 @@ void RTManager::RemoveSensorRenderer(const gz::sim::Entity &_entity)
   {
     free_rt_lidar(this->rt_lidars.at(_entity));
     this->rt_lidars.erase(_entity);
+    this->scanPublishers.erase(_entity);
   }
 }
 

@@ -541,16 +541,20 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
     //lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
     //scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
-    let mut raw_points: Vec<f32> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
+    /*let mut raw_points: Vec<f32> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
         .flatten().map(|p| *p).collect();
 
     let point_cloud = RtPointCloud {
         points: raw_points.as_mut_ptr(),
         length: raw_points.len(),
-    };
+    };*/
     //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     // Prevent the vector from being deallocated
-    std::mem::forget(raw_points);
+    //std::mem::forget(raw_points);
+    let len = res.len();
+    let ptr = res.as_mut_ptr();
+    std::mem::forget(res);
+    let point_cloud = RtPointCloud { points: ptr, length: len };
 
     point_cloud
 }

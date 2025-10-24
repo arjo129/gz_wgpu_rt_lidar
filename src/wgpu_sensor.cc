@@ -117,11 +117,12 @@ namespace wgpu_sensor
         job.sensorWorldPose = gz::sim::worldPose(sensor->ParentEntity(), _ecm);
         job.updateInfo = _info;
 
-        auto parentNameComp = _ecm.Component<gz::sim::components::Name>(sensor->ParentEntity());
-        if(parentNameComp)
-        {
-          job.parentFrameId = parentNameComp->Data();
-        }
+        //auto parentNameComp = _ecm.Component<gz::sim::components::Name>(sensor->ParentEntity());
+        //if(parentNameComp)
+       // {
+        //  job.parentFrameId = parentNameComp->Data();
+       // }
+        job.parentFrameId = gz::sim::scopedName(sensor->ParentEntity(), _ecm, "::", false);
         this->rtManager->QueueRenderJob(job);
       }
     }

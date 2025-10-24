@@ -111,8 +111,8 @@
               <lasers>16</lasers>
               <steps>3600</steps>
               <vertical>
-                <min_angle>-0.2617</min_angle>
-                <max_angle>0.2617</max_angle>
+                <min_angle>-0</min_angle>
+                <max_angle>0</max_angle>
                 <step>0.1</step>
               </vertical>
               <horizontal>
