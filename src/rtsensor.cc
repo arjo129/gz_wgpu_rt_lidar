@@ -116,7 +116,6 @@ RtSensor::SensorType RtSensor::Type() const
   return this->sensorType;
 }
 
-
 //////////////////////////////////////////////////
 const gz::math::Pose3d & RtSensor::Pose() const
 {
@@ -146,7 +145,8 @@ void RtSensor::LidarConfig(const sdf::ElementPtr & _sdf)
       this->config.lidar.max_vertical_angle = vertElem->Get < double > ("max_angle", M_PI).first;
       if (this->config.lidar.num_lasers > 1) {
         this->config.lidar.step_vertical_angle = (this->config.lidar.max_vertical_angle -
-          this->config.lidar.min_vertical_angle) / (this->config.lidar.num_lasers - 1);
+          this->config.lidar.min_vertical_angle) /
+          (this->config.lidar.num_lasers - 1);
       } else {
         this->config.lidar.step_vertical_angle = 0.0;
       }
@@ -158,7 +158,8 @@ void RtSensor::LidarConfig(const sdf::ElementPtr & _sdf)
       this->config.lidar.max_horizontal_angle = horzElem->Get < double > ("max_angle", M_PI).first;
       if (this->config.lidar.num_steps > 1) {
         this->config.lidar.step_horizontal_angle = (this->config.lidar.max_horizontal_angle -
-          this->config.lidar.min_horizontal_angle) / (this->config.lidar.num_steps - 1);
+          this->config.lidar.min_horizontal_angle) /
+          (this->config.lidar.num_steps - 1);
       } else {
         this->config.lidar.step_horizontal_angle = 0.0;
       }

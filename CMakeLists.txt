@@ -66,6 +66,11 @@ install(TARGETS wgpu_rt_sensor DESTINATION lib)
 # Testing
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  # Uses gazebo style
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE
+  ament_cmake_uncrustify
+  ament_cmake_cpplint
+  )
   ament_lint_auto_find_test_dependencies()
 endif()
 
