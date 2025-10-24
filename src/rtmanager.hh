@@ -18,7 +18,7 @@ namespace wgpu_sensor
 {
   class RTManager
   {
-  public:
+public:
     /// \brief Constructor
     RTManager();
 
@@ -34,7 +34,7 @@ namespace wgpu_sensor
       /// \brief Sensor Entity ID
       gz::sim::Entity entityId;
       /// \brief RT Sensor parameters
-      std::shared_ptr<rtsensor::RtSensor> sensor;
+      std::shared_ptr < rtsensor::RtSensor > sensor;
       /// \brief Sensor World Pose
       gz::math::Pose3d sensorWorldPose;
       /// \brief The Update Info
@@ -43,49 +43,50 @@ namespace wgpu_sensor
       std::string parentFrameId;
     };
 
-	  /// \brief Adds a render job to the queue
-    void QueueRenderJob(const RenderJob& _job);
+          /// \brief Adds a render job to the queue
+    void QueueRenderJob(const RenderJob & _job);
 
     /// \brief Builds the initial ray-tracing scene from world geometry
-    void BuildScene(const gz::sim::EntityComponentManager &_ecm);
+    void BuildScene(const gz::sim::EntityComponentManager & _ecm);
 
     /// \brief Updates the transforms of all dynamic objects in the scene
-    void UpdateTransforms(const gz::sim::EntityComponentManager &_ecm);
+    void UpdateTransforms(const gz::sim::EntityComponentManager & _ecm);
 
     /// \brief Creates the specific sensor renderer (camera or lidar)
-    void CreateSensorRenderer(const gz::sim::Entity &_entity,
-                              const std::shared_ptr<rtsensor::RtSensor>& _sensor);
+    void CreateSensorRenderer(
+      const gz::sim::Entity & _entity,
+      const std::shared_ptr < rtsensor::RtSensor > &_sensor);
 
     /// \brief Removes a sensor renderer when the entity is removed
-    void RemoveSensorRenderer(const gz::sim::Entity &_entity);
+    void RemoveSensorRenderer(const gz::sim::Entity & _entity);
 
     /// \brief Checks if the scene has been built
     bool IsSceneInitialized() const;
 
-  private:
+private:
     /// \brief Converts SDF geometry to a format the Rust backend can use
-    Mesh* convertSDFModelToWGPU(const sdf::Geometry& geom);
+    Mesh * convertSDFModelToWGPU(const sdf::Geometry & geom);
 
     /// \brief Pointer to the main Rust runtime
-    RtRuntime* rt_runtime{nullptr};
+    RtRuntime * rt_runtime {nullptr};
 
     /// \brief Pointer to the ray-tracing scene on the GPU
-    RtScene* rt_scene{nullptr};
+    RtScene * rt_scene {nullptr};
 
     /// \brief Maps a Gazebo entity to a Rust scene instance for pose updates
-    std::unordered_map<gz::sim::Entity, size_t> gz_entity_to_rt_instance;
+    std::unordered_map < gz::sim::Entity, size_t > gz_entity_to_rt_instance;
 
     /// \brief Maps a sensor entity to its specific Rust depth camera renderer
-    std::unordered_map<gz::sim::Entity, RtDepthCamera*> rt_depth_cameras;
+    std::unordered_map < gz::sim::Entity, RtDepthCamera * > rt_depth_cameras;
 
     /// \brief Maps a sensor entity to its specific Rust LiDAR renderer
-    std::unordered_map<gz::sim::Entity, RtLidar*> rt_lidars;
+    std::unordered_map < gz::sim::Entity, RtLidar * > rt_lidars;
 
-	  /// \brief Initializes transport node
+          /// \brief Initializes transport node
     gz::transport::Node node;
 
-	  /// \brief Stores transport publishers
-    std::unordered_map<gz::sim::Entity, gz::transport::Node::Publisher> publishers;
+          /// \brief Stores transport publishers
+    std::unordered_map < gz::sim::Entity, gz::transport::Node::Publisher > publishers;
 
     /// \brief The main render loop function
     void RenderLoop();
@@ -94,7 +95,7 @@ namespace wgpu_sensor
     std::thread workerThread;
 
     /// \brief Queue holds the render jobs
-    std::queue<RenderJob> jobQueue;
+    std::queue < RenderJob > jobQueue;
 
     /// \brief Mutex (lock) protects the queue from being accessed by both threads at once
     std::mutex queueMutex;
@@ -103,6 +104,6 @@ namespace wgpu_sensor
     std::condition_variable condition;
 
     /// \brief Flag tells the thread to stop when we're done
-    bool stopThread{false};
+    bool stopThread {false};
   };
 }
