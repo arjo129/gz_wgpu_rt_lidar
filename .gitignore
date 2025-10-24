@@ -41,3 +41,4 @@ Makefile
 # Rust
 target/
 Cargo.lock
+*.sample.sdf
