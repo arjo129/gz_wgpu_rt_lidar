@@ -37,7 +37,7 @@ For code completion to work in VS Code you may need to specify the following
 ## Build from source
 On ROS2 Jazzy:
 ```bash
-git clone git@github.com:arjo129/gz_wgpu_rt_lidar.git
+git clone https://github.com/arjo129/gz_wgpu_rt_lidar.git
 cd gz_wgpu_rt_lidar
 rosdep install --from-paths gz_wgpu_rt_lidar
 colcon build
