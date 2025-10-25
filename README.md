@@ -16,7 +16,6 @@ Summary of current features:
 ## Requirements
 This package is designed to be built on ROS 2 Jazzy. To build and run this project, you will need:
 - A recent version of [Rust](https://www.rust-lang.org/tools/install).
-- [rerun](https://rerun.io/docs/getting-started/installing-viewer#installing-the-viewer) (v0.22.1) installed via `cargo install rerun-cli@0.22.1`.
 - A non-apple ray-tracing enabled GPU (NVIDIA RTX or above, AMD RX6000 and above, Steam Deck or Intel Battlemage)
 
 ## Supported platform
