@@ -25,6 +25,7 @@ find_package(gz-sensors REQUIRED)
 
 #============================================================================
 # Corrosion
+# lint_cmake: -readability/wonkycase
 include(FetchContent)
 
 FetchContent_Declare(

@@ -77,6 +77,9 @@ You can then visualize these topics in RViz2 or any other ROS 2 visualization to
 ros2 topic list  # Verify topics are available
 rviz2  # Visualize the sensor data
 ```
+If you configure rviz correctly you should get something like:
+![rviz_demo](images/rviz_demo.png)
+
 
 ## Screenshots
 
@@ -133,8 +136,8 @@ Depth Camera:
 ```
 LidAR Sensor:
 ```xml
-      <!-- Custom LiDAR Sensor -->
-<sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
+   <!-- Custom LiDAR Sensor -->
+   <sensor name="my_rt_lidar" type="custom" gz:type="rt_lidar">
    <always_on>1</always_on>
    <update_rate>10</update_rate>
    <topic>/my_robot/lidar/points</topic>
@@ -159,12 +162,3 @@ LidAR Sensor:
 </sensor>
 ```
 Note: These custom sensors should be placed within a model's link in your SDF file.
-
-## TODOs
-- **Performance**: Move all rendering and data publishing to a dedicated worker thread.
-
-- **ROS 2 Integration**: Finalize the standard robot_state_publisher workflow to provide stable TF data for RViz.
-
-- **Full SDF Support**: Add ray-tracing support for all standard SDF geometries (cylinders, spheres, etc.).
-
-- **Advanced Features**: Implement realistic noise models and intensity returns based on material properties.

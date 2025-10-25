@@ -1,20 +1,35 @@
-use glam::{Affine3A, Mat3A, Quat, Vec3A, Vec3};
+/*
+ * Copyright (C) 2025 Arjo Chakravarty, Shashank Rao
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+use glam::{Affine3A, Mat3A, Quat, Vec3, Vec3A};
 use ndarray::ShapeBuilder;
-use wgpu_rt_lidar::wgpu::{Device, Queue};
-use wgpu_rt_lidar::{utils::get_raytracing_gpu,lidar::Lidar, vertex, AssetMesh, Instance, Vertex};
 use std::time::Instant;
+use wgpu_rt_lidar::wgpu::{Device, Queue};
+use wgpu_rt_lidar::{lidar::Lidar, utils::get_raytracing_gpu, vertex, AssetMesh, Instance, Vertex};
 
 #[no_mangle]
 pub extern "C" fn create_mesh() -> *mut Mesh {
     Box::into_raw(Box::new(Mesh {
         vertices: Vec::new(),
-        faces: Vec::new()
+        faces: Vec::new(),
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn free_mesh(ptr: *mut Mesh)
-{
+pub extern "C" fn free_mesh(ptr: *mut Mesh) {
     if ptr.is_null() {
         return;
     }
@@ -41,32 +56,42 @@ pub extern "C" fn add_mesh_face(mesh: *mut Mesh, face: u16) {
     mesh.faces.push(face);
 }
 
-
 #[repr(C)]
 #[derive(Clone)]
 pub struct Mesh {
     vertices: Vec<Vertex>,
-    faces: Vec<u16>
+    faces: Vec<u16>,
 }
 
 #[repr(C)]
 pub struct InstanceWrapper {
-    instance: Instance
+    instance: Instance,
 }
 
-
 #[no_mangle]
-pub extern "C" fn create_instance_wrapper(asset_index: usize, x: f32, y: f32, z:f32, qx:f32, qy:f32, qz:f32, qw:f32) -> *mut InstanceWrapper {
+pub extern "C" fn create_instance_wrapper(
+    asset_index: usize,
+    x: f32,
+    y: f32,
+    z: f32,
+    qx: f32,
+    qy: f32,
+    qz: f32,
+    qw: f32,
+) -> *mut InstanceWrapper {
     Box::into_raw(Box::new(InstanceWrapper {
-            instance: Instance{
-                asset_mesh_index: asset_index,
-                transform: Affine3A { matrix3: Mat3A::from_quat(Quat::from_xyzw(qx,qy,qz,qw)), translation: Vec3A::new(x, y, z)}
-            }
+        instance: Instance {
+            asset_mesh_index: asset_index,
+            transform: Affine3A {
+                matrix3: Mat3A::from_quat(Quat::from_xyzw(qx, qy, qz, qw)),
+                translation: Vec3A::new(x, y, z),
+            },
+        },
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn free_instance_wrapper(ptr: *mut InstanceWrapper){
+pub extern "C" fn free_instance_wrapper(ptr: *mut InstanceWrapper) {
     if ptr.is_null() {
         return;
     }
@@ -75,25 +100,22 @@ pub extern "C" fn free_instance_wrapper(ptr: *mut InstanceWrapper){
     }
 }
 
-
-
 #[repr(C)]
 pub struct RtSceneBuilder {
     meshes: Vec<Mesh>,
-    instances: Vec<Instance>
+    instances: Vec<Instance>,
 }
 
 #[no_mangle]
 pub extern "C" fn create_rt_scene_builder() -> *mut RtSceneBuilder {
     Box::into_raw(Box::new(RtSceneBuilder {
         meshes: Vec::new(),
-        instances: Vec::new()
+        instances: Vec::new(),
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_scene_builder(ptr: *mut RtSceneBuilder)
-{
+pub extern "C" fn free_rt_scene_builder(ptr: *mut RtSceneBuilder) {
     if ptr.is_null() {
         return;
     }
@@ -103,8 +125,7 @@ pub extern "C" fn free_rt_scene_builder(ptr: *mut RtSceneBuilder)
 }
 
 #[no_mangle]
-pub extern "C" fn add_mesh(ptr: *mut RtSceneBuilder, mesh: &Mesh) -> usize
-{
+pub extern "C" fn add_mesh(ptr: *mut RtSceneBuilder, mesh: &Mesh) -> usize {
     let mut builder = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -115,8 +136,7 @@ pub extern "C" fn add_mesh(ptr: *mut RtSceneBuilder, mesh: &Mesh) -> usize
 }
 
 #[no_mangle]
-pub extern "C" fn add_instance(ptr: *mut RtSceneBuilder, instance: *mut InstanceWrapper) -> usize
-{
+pub extern "C" fn add_instance(ptr: *mut RtSceneBuilder, instance: *mut InstanceWrapper) -> usize {
     let mut builder = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -132,7 +152,6 @@ pub extern "C" fn add_instance(ptr: *mut RtSceneBuilder, instance: *mut Instance
     id
 }
 
-
 #[repr(C)]
 pub struct RtRuntime {
     device: Device,
@@ -142,11 +161,8 @@ pub struct RtRuntime {
 impl RtRuntime {
     pub async fn new() -> Self {
         let instance = wgpu_rt_lidar::wgpu::Instance::default();
-        let (_, device, queue) =  get_raytracing_gpu(&instance).await;
-        RtRuntime {
-            device,
-            queue
-        }
+        let (_, device, queue) = get_raytracing_gpu(&instance).await;
+        RtRuntime { device, queue }
     }
 }
 #[no_mangle]
@@ -155,8 +171,7 @@ pub extern "C" fn create_rt_runtime() -> *mut RtRuntime {
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_runtime(ptr: *mut RtRuntime)
-{
+pub extern "C" fn free_rt_runtime(ptr: *mut RtRuntime) {
     if ptr.is_null() {
         return;
     }
@@ -168,19 +183,23 @@ pub extern "C" fn free_rt_runtime(ptr: *mut RtRuntime)
 #[repr(C)]
 pub struct RtSceneUpdate {
     pub updates: Vec<Instance>,
-    pub indices: Vec<usize>
+    pub indices: Vec<usize>,
 }
 
 #[no_mangle]
 pub extern "C" fn create_rt_scene_update() -> *mut RtSceneUpdate {
     Box::into_raw(Box::new(RtSceneUpdate {
         updates: Vec::new(),
-        indices: Vec::new()
+        indices: Vec::new(),
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn add_update(ptr: *mut RtSceneUpdate, instance_wrapper: *mut InstanceWrapper, index: usize) {
+pub extern "C" fn add_update(
+    ptr: *mut RtSceneUpdate,
+    instance_wrapper: *mut InstanceWrapper,
+    index: usize,
+) {
     let mut update = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -194,8 +213,7 @@ pub extern "C" fn add_update(ptr: *mut RtSceneUpdate, instance_wrapper: *mut Ins
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate)
-{
+pub extern "C" fn free_rt_scene_update(ptr: *mut RtSceneUpdate) {
     if ptr.is_null() {
         return;
     }
@@ -211,7 +229,10 @@ pub struct RtScene {
 }
 
 #[no_mangle]
-pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtSceneBuilder) -> *mut RtScene {
+pub extern "C" fn create_rt_scene(
+    runtime: *mut RtRuntime,
+    builder: *mut RtSceneBuilder,
+) -> *mut RtScene {
     let runtime = unsafe {
         assert!(!runtime.is_null());
         &mut *runtime
@@ -225,14 +246,19 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
     //let rec = rerun::RecordingStreamBuilder::new("debug_viz")
     //  .spawn()
     //  .unwrap();
-    let scene = 
-     futures::executor::block_on(
-        wgpu_rt_lidar::RayTraceScene::new(
-            &runtime.device, 
-            &runtime.queue, 
-            &builder.meshes.iter().map(|m| 
-                AssetMesh {vertex_buf: m.vertices.clone(), index_buf: m.faces.clone()}).collect::<Vec<AssetMesh>>(),
-            &builder.instances));
+    let scene = futures::executor::block_on(wgpu_rt_lidar::RayTraceScene::new(
+        &runtime.device,
+        &runtime.queue,
+        &builder
+            .meshes
+            .iter()
+            .map(|m| AssetMesh {
+                vertex_buf: m.vertices.clone(),
+                index_buf: m.faces.clone(),
+            })
+            .collect::<Vec<AssetMesh>>(),
+        &builder.instances,
+    ));
     Box::into_raw(Box::new(RtScene {
         scene,
         //rec
@@ -240,7 +266,11 @@ pub extern "C" fn create_rt_scene(runtime: *mut RtRuntime, builder: *mut RtScene
 }
 
 #[no_mangle]
-pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, updates: *mut RtSceneUpdate) {
+pub extern "C" fn set_transforms(
+    ptr: *mut RtScene,
+    device: *mut RtRuntime,
+    updates: *mut RtSceneUpdate,
+) {
     let scene = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -254,14 +284,18 @@ pub extern "C" fn set_transforms(ptr: *mut RtScene, device: *mut RtRuntime, upda
         &mut *updates
     };
     //println!("Setting transforms {:?}", updates.updates);
-    futures::executor::block_on(scene.scene.set_transform(&device.device, &device.queue, &updates.updates, &updates.indices));
+    futures::executor::block_on(scene.scene.set_transform(
+        &device.device,
+        &device.queue,
+        &updates.updates,
+        &updates.indices,
+    ));
 
     //scene.scene.visualize(&scene.rec);
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_scene(ptr: *mut RtScene)
-{
+pub extern "C" fn free_rt_scene(ptr: *mut RtScene) {
     if ptr.is_null() {
         return;
     }
@@ -276,15 +310,22 @@ pub struct ViewMatrix {
 }
 
 #[no_mangle]
-pub extern "C" fn create_view_matrix(x: f32, y: f32, z: f32, qx:f32, qy:f32, qz:f32) -> *mut ViewMatrix {
+pub extern "C" fn create_view_matrix(
+    x: f32,
+    y: f32,
+    z: f32,
+    qx: f32,
+    qy: f32,
+    qz: f32,
+) -> *mut ViewMatrix {
     Box::into_raw(Box::new(ViewMatrix {
-        view: glam::Mat4::from_translation(glam::Vec3::new(x, y, z)) * glam::Mat4::from_quat(glam::Quat::from_xyzw(qx, qy, qz, 1.0))
+        view: glam::Mat4::from_translation(glam::Vec3::new(x, y, z))
+            * glam::Mat4::from_quat(glam::Quat::from_xyzw(qx, qy, qz, 1.0)),
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn free_view_matrix(ptr: *mut ViewMatrix)
-{
+pub extern "C" fn free_view_matrix(ptr: *mut ViewMatrix) {
     if ptr.is_null() {
         return;
     }
@@ -295,20 +336,25 @@ pub extern "C" fn free_view_matrix(ptr: *mut ViewMatrix)
 
 #[repr(C)]
 pub struct RtDepthCamera {
-    camera: wgpu_rt_lidar::depth_camera::DepthCamera
+    camera: wgpu_rt_lidar::depth_camera::DepthCamera,
 }
 
 #[no_mangle]
-pub extern "C" fn create_rt_depth_camera(runtime: *mut RtRuntime, width: u32, height: u32, fov: f32) -> *mut RtDepthCamera {
-
+pub extern "C" fn create_rt_depth_camera(
+    runtime: *mut RtRuntime,
+    width: u32,
+    height: u32,
+    fov: f32,
+) -> *mut RtDepthCamera {
     let runtime = unsafe {
         assert!(!runtime.is_null());
         &mut *runtime
     };
 
-    let camera = wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov, 50.0);
+    let camera =
+        wgpu_rt_lidar::depth_camera::DepthCamera::new(&runtime.device, width, height, fov, 50.0);
     Box::into_raw(Box::new(RtDepthCamera {
-        camera: futures::executor::block_on(camera)
+        camera: futures::executor::block_on(camera),
     }))
 }
 
@@ -321,7 +367,12 @@ pub struct ImageData {
 }
 
 #[no_mangle]
-pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> ImageData{
+pub extern "C" fn render_depth(
+    ptr: *mut RtDepthCamera,
+    scene: *mut RtScene,
+    runtime: *mut RtRuntime,
+    view: *mut ViewMatrix,
+) -> ImageData {
     let camera = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -344,12 +395,15 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     let start_time = Instant::now();
 
     //scene.scene.visualize(&scene.rec);
-    let res = futures::executor::block_on(camera.camera.render_depth_camera(&scene.scene, &runtime.device, &runtime.queue, view.view.inverse()));
+    let res = futures::executor::block_on(camera.camera.render_depth_camera(
+        &scene.scene,
+        &runtime.device,
+        &runtime.queue,
+        view.view.inverse(),
+    ));
     let width = camera.camera.width() as u32;
     let height = camera.camera.height() as u32;
-    let converted_data: Vec<u16> = res.iter()
-        .map(|x| (x * 1000.0) as u16)
-        .collect();
+    let converted_data: Vec<u16> = res.iter().map(|x| (x * 1000.0) as u16).collect();
 
     let mut boxed_data = converted_data.into_boxed_slice();
     let data_ptr = boxed_data.as_mut_ptr();
@@ -360,8 +414,12 @@ pub extern "C" fn render_depth(ptr: *mut RtDepthCamera, scene: *mut RtScene, run
     //println!("Render time for CAMERA: {:.2}ms", elapsed2.as_secs_f64() * 1000.0);
 
     // Return the image data struct
-    ImageData { ptr: data_ptr, len: data_len, width, height }
-    
+    ImageData {
+        ptr: data_ptr,
+        len: data_len,
+        width,
+        height,
+    }
 }
 
 #[no_mangle]
@@ -370,13 +428,15 @@ pub extern "C" fn free_image_data(image_data: ImageData) {
         return;
     }
     unsafe {
-        drop(Box::from_raw(std::slice::from_raw_parts_mut(image_data.ptr, image_data.len)));
+        drop(Box::from_raw(std::slice::from_raw_parts_mut(
+            image_data.ptr,
+            image_data.len,
+        )));
     }
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_depth_camera(ptr: *mut RtDepthCamera)
-{
+pub extern "C" fn free_rt_depth_camera(ptr: *mut RtDepthCamera) {
     if ptr.is_null() {
         return;
     }
@@ -393,7 +453,7 @@ struct Rt3DLidarConfiguration {
     min_horizontal_angle: f32,
     max_horizontal_angle: f32,
     step_horizontal_angle: f32,
-    num_steps: usize
+    num_steps: usize,
 }
 
 #[no_mangle]
@@ -405,7 +465,7 @@ fn new_lidar_config(
     step_vertical_angle: f32,
     min_horizontal_angle: f32,
     max_horizontal_angle: f32,
-    step_horizontal_angle: f32
+    step_horizontal_angle: f32,
 ) -> *mut Rt3DLidarConfiguration {
     Box::into_raw(Box::new(Rt3DLidarConfiguration {
         num_lasers,
@@ -415,7 +475,7 @@ fn new_lidar_config(
         min_horizontal_angle,
         max_horizontal_angle,
         step_horizontal_angle,
-        num_steps: num_steps
+        num_steps: num_steps,
     }))
 }
 
@@ -435,11 +495,12 @@ impl Rt3DLidarConfiguration {
         for i in 0..self.num_lasers {
             let vertical_angle = self.min_vertical_angle + i as f32 * self.step_vertical_angle;
             for j in 0..self.num_steps {
-                let horizontal_angle = self.min_horizontal_angle + j as f32 * self.step_horizontal_angle;
+                let horizontal_angle =
+                    self.min_horizontal_angle + j as f32 * self.step_horizontal_angle;
                 let direction = glam::Vec3::new(
                     vertical_angle.cos() * horizontal_angle.cos(),
                     vertical_angle.cos() * horizontal_angle.sin(),
-                    vertical_angle.sin()
+                    vertical_angle.sin(),
                 );
                 directions.push(direction);
                 //println!("length: {}", direction.length());
@@ -450,10 +511,9 @@ impl Rt3DLidarConfiguration {
 }
 
 #[repr(C)]
-struct RtPointCloud
-{
+struct RtPointCloud {
     points: *mut f32,
-    length: usize
+    length: usize,
 }
 
 #[no_mangle]
@@ -471,12 +531,15 @@ fn free_pointcloud(ptr: *mut RtPointCloud) {
 }
 
 #[repr(C)]
-struct RtLidar{
-    lidar: wgpu_rt_lidar::lidar::Lidar
+struct RtLidar {
+    lidar: wgpu_rt_lidar::lidar::Lidar,
 }
 
 #[no_mangle]
-pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt3DLidarConfiguration) -> *mut RtLidar {
+pub extern "C" fn create_rt_lidar(
+    runtime: *mut RtRuntime,
+    lidar_config: *mut Rt3DLidarConfiguration,
+) -> *mut RtLidar {
     let runtime = unsafe {
         assert!(!runtime.is_null());
         &mut *runtime
@@ -491,12 +554,17 @@ pub extern "C" fn create_rt_lidar(runtime: *mut RtRuntime, lidar_config: *mut Rt
 
     let lidar = wgpu_rt_lidar::lidar::Lidar::new(&runtime.device, beams);
     Box::into_raw(Box::new(RtLidar {
-        lidar: futures::executor::block_on(lidar)
+        lidar: futures::executor::block_on(lidar),
     }))
 }
 
 #[no_mangle]
-pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: *mut RtRuntime, view: *mut ViewMatrix) -> RtPointCloud{
+pub extern "C" fn render_lidar(
+    ptr: *mut RtLidar,
+    scene: *mut RtScene,
+    runtime: *mut RtRuntime,
+    view: *mut ViewMatrix,
+) -> RtPointCloud {
     let lidar = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -521,25 +589,33 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
 
     let start_time = Instant::now();
     //scene.scene.visualize(&scene.rec);
-    let mut res = futures::executor::block_on(
-        lidar.lidar.render_lidar_pointcloud(&scene.scene, &runtime.device, &runtime.queue, &lidar_pose));
+    let mut res = futures::executor::block_on(lidar.lidar.render_lidar_pointcloud(
+        &scene.scene,
+        &runtime.device,
+        &runtime.queue,
+        &lidar_pose,
+    ));
     let elapsed = start_time.elapsed();
     //println!("Render time for LiDAR: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
     //println!("Number of points rendered: {}", res.len());
     //println!("Points: {:?}", res);
     let p = res
-      .chunks(4)
-      .filter(|p| p[3] < Lidar::no_hit_const())
-      .map(|p| {
-          lidar_pose
-            .transform_point3(Vec3::new(p[0], p[1], p[2]))
-            .to_array()
-      });
+        .chunks(4)
+        .filter(|p| p[3] < Lidar::no_hit_const())
+        .map(|p| {
+            lidar_pose
+                .transform_point3(Vec3::new(p[0], p[1], p[2]))
+                .to_array()
+        });
     //lidar.lidar.visualize_rays(&scene.rec, &lidar_pose, "lidar_beams");
     //scene.rec.log("points", &rerun::Points3D::new(p)).unwrap();
 
-    let mut raw_points: Vec<f32> = res.chunks(4).filter(|p| p[3] < Lidar::no_hit_const())
-        .flatten().map(|p| *p).collect();
+    let mut raw_points: Vec<f32> = res
+        .chunks(4)
+        .filter(|p| p[3] < Lidar::no_hit_const())
+        .flatten()
+        .map(|p| *p)
+        .collect();
 
     let point_cloud = RtPointCloud {
         points: raw_points.as_mut_ptr(),
@@ -553,13 +629,11 @@ pub extern "C" fn render_lidar(ptr: *mut RtLidar, scene: *mut RtScene, runtime: 
 }
 
 #[no_mangle]
-pub extern "C" fn free_rt_lidar(ptr: *mut RtLidar)
-{
+pub extern "C" fn free_rt_lidar(ptr: *mut RtLidar) {
     if ptr.is_null() {
         return;
     }
     unsafe {
         drop(Box::from_raw(ptr));
     }
-
 }
