@@ -69,8 +69,8 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # Uses gazebo style
   list(APPEND AMENT_LINT_AUTO_EXCLUDE
-  ament_cmake_uncrustify
   ament_cmake_cpplint
+  copyright
   )
   ament_lint_auto_find_test_dependencies()
 endif()

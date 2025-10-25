@@ -21,19 +21,6 @@ This package is designed to be built on ROS 2 Jazzy. To build and run this proje
 ## Supported platform
 This library is only available as a source build on ROS2 Jazzy.
 
-## Distrobox usage
-I personally love using Distrobox. It might be overkill, but it is great for quickly getting things going. I can spin up specific ROS 2 versions with much ease on a linux system. If you are building in distrobox and have an Nvidia Graphics card, you will need the `--nvidia` flags.
-
-
-## Rust Analyzer Config
-For code completion to work in VS Code you may need to specify the following
-```json
-{
-    "rust-analyzer.linkedProjects": [
-        "gz_wgpu_rt_lidar/src/rust_system/Cargo.toml"
-    ]
-}
-```
 ## Build from source
 On ROS2 Jazzy:
 ```bash
@@ -46,12 +33,6 @@ Important: Before running Gazebo, ensure your system can find the compiled plugi
 ```bash
 source install/setup.bash
 ```
-## Code Quality and Linting
-This project uses `ament_uncrustify` to enforce C++ code style. To check your code:
-```bash
-colcon test --packages-select gz_wgpu_rt_lidar --event-handlers console_direct+
-```
-The uncrustify configuration can be found in `.uncrustify.cfg` in the root of this package.
 
 ## Running the Examples
 After building and sourcing your workspace, you can run an example SDF file:

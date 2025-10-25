@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>Provides a proof of concept raytracing lidar sensors that is compatible with a wide variety of GPUs</description>
   <maintainer email="arjo129@gmail.com">Arjo Chakravarty</maintainer>
-  <license>Apache License</license>
+  <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>gz_sim_vendor</depend>
