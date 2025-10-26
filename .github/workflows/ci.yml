@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup ROS 2 Jazzy
+      uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: jazzy
+        
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Setup colcon workspace
+      run: |
+        mkdir -p ~/colcon_ws/src
+        cp -r $GITHUB_WORKSPACE ~/colcon_ws/src/gz_wgpu_rt_lidar
+        
+    - name: Install dependencies with rosdep
+      run: |
+        cd ~/colcon_ws
+        source /opt/ros/jazzy/setup.bash
+        sudo apt-get update
+        rosdep update
+        rosdep install --from-paths src --ignore-src -y --skip-keys "cargo"
+        
+    - name: Build with colcon
+      run: |
+        cd ~/colcon_ws
+        source /opt/ros/jazzy/setup.bash
+        colcon build --symlink-install
+        
+    - name: Run linters
+      run: |
+        cd ~/colcon_ws
+        source /opt/ros/jazzy/setup.bash
+        source install/setup.bash
+        colcon test --packages-select gz_wgpu_rt_lidar --event-handlers console_direct+ || true
+        
+    - name: Get test results
+      run: |
+        cd ~/colcon_ws
+        source /opt/ros/jazzy/setup.bash
+        colcon test-result --verbose || true
