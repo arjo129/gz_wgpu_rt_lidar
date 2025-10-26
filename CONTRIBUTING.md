@@ -1,5 +1,8 @@
-Any contribution that you make to this repository will be under the Apache 2 License, as dictated by that license:
-```
+Any contribution that you make to this repository will
+be under the Apache 2 License, as dictated by that
+[license](http://www.apache.org/licenses/LICENSE-2.0.html):
+
+~~~
 5. Submission of Contributions. Unless You explicitly state otherwise,
    any Contribution intentionally submitted for inclusion in the Work
    by You to the Licensor shall be under the terms and conditions of
@@ -7,7 +10,7 @@ Any contribution that you make to this repository will be under the Apache 2 Lic
    Notwithstanding the above, nothing herein shall supersede or modify
    the terms of any separate license agreement you may have executed
    with Licensor regarding such Contributions.
-```   
+~~~
 
 ## Build from source
 On ROS2 Jazzy:
