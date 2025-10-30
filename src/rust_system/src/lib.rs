@@ -286,7 +286,6 @@ pub extern "C" fn set_transforms(
     //println!("Setting transforms {:?}", updates.updates);
     futures::executor::block_on(scene.scene.set_transform(
         &device.device,
-        &device.queue,
         &updates.updates,
         &updates.indices,
     ));
