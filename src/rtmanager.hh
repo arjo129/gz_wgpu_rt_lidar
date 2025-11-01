@@ -23,6 +23,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <shared_mutex>
 #include <thread>
 #include <unordered_map>
 
@@ -80,9 +81,22 @@ public:
 
   /// \brief Checks if the scene has been built
   bool IsSceneInitialized() const;
-private:
-  /// \brief Converts SDF geometry to a format the Rust backend can use
-  Mesh * convertSDFModelToWGPU(const sdf::Geometry & geom);
+
+  /// \brief Mark the scene as dirty, requiring a rebuild
+    void MarkSceneDirty();
+
+  /// \brief Check if the scene is dirty
+  bool IsSceneDirty() const;
+
+  /// \brief Determines if the scene needs to be rebuilt due to entity changes
+  bool NeedsRebuild(const gz::sim::EntityComponentManager &_ecm) const;
+
+  /// \brief Rebuild the scene (clears and rebuilds from scratch)
+  void RebuildScene(const gz::sim::EntityComponentManager &_ecm);
+
+  private:
+    /// \brief Converts SDF geometry to a format the Rust backend can use
+    Mesh * convertSDFModelToWGPU(const sdf::Geometry& geom);
 
   /// \brief Pointer to the main Rust runtime
   RtRuntime *rt_runtime {nullptr};
@@ -120,7 +134,13 @@ private:
   /// \brief Signals the worker thread that a new job is ready
   std::condition_variable condition;
 
-  /// \brief Flag tells the thread to stop when we're done
-  bool stopThread {false};
+    /// \brief Flag tells the thread to stop when we're done
+    bool stopThread{false};
+
+    /// \brief Flag indicating if the scene needs to be rebuilt due to entity changes
+    bool sceneDirty = false;
+
+    /// \brief Mutex to protect scene data during updates and rendering
+    mutable std::shared_mutex sceneMutex;
 };
-} // namespace wgpu_sensor
+}
