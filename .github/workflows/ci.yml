@@ -48,10 +48,9 @@ jobs:
         cd ~/colcon_ws
         source /opt/ros/jazzy/setup.bash
         source install/setup.bash
-        colcon test --packages-select gz_wgpu_rt_lidar --event-handlers console_direct+ || true
-        
+        colcon test --packages-select gz_wgpu_rt_lidar --event-handlers console_direct+         
     - name: Get test results
       run: |
         cd ~/colcon_ws
         source /opt/ros/jazzy/setup.bash
-        colcon test-result --verbose || true
+        colcon test-result --verbose
