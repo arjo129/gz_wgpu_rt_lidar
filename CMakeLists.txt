@@ -71,6 +71,8 @@ add_library(wgpu_rt_sensor SHARED
   src/rtsensor.cc
   src/rtmanager.cc)
 
+target_compile_features(wgpu_rt_sensor PUBLIC cxx_std_20)
+
 target_link_libraries(wgpu_rt_sensor PUBLIC
         rust_system
         gz-plugin::gz-plugin
