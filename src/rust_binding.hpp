@@ -61,10 +61,13 @@ public:
 
   void Reset(T * _ptr = nullptr)
   {
-    if (this->ptr != nullptr) {
-      FreeFn(this->ptr);
+    if (this->ptr == _ptr) {
+      return;
     }
-    this->ptr = _ptr;
+    T * old = std::exchange(this->ptr, _ptr);
+    if (old != nullptr) {
+      FreeFn(old);
+    }
   }
 
 private:
@@ -95,6 +98,8 @@ public:
   {
     _other.data.ptr = nullptr;
     _other.data.len = 0;
+    _other.data.width = 0;
+    _other.data.height = 0;
   }
 
   ImageDataOwner & operator=(ImageDataOwner && _other) noexcept
@@ -104,6 +109,8 @@ public:
       this->data = _other.data;
       _other.data.ptr = nullptr;
       _other.data.len = 0;
+      _other.data.width = 0;
+      _other.data.height = 0;
     }
     return *this;
   }
@@ -117,9 +124,11 @@ public:
   {
     if (this->data.ptr != nullptr) {
       free_image_data(this->data);
-      this->data.ptr = nullptr;
-      this->data.len = 0;
     }
+    this->data.ptr = nullptr;
+    this->data.len = 0;
+    this->data.width = 0;
+    this->data.height = 0;
   }
 
   uint32_t Width() const { return this->data.width; }
