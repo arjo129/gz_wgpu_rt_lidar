@@ -176,39 +176,41 @@ impl RtRuntime {
         let (device, queue) = match gpu_name.as_deref().filter(|s| !s.is_empty()) {
             Some(name) => {
                 let name_lower = name.to_lowercase();
-                let adapter = instance
-                    .enumerate_adapters(Backends::all())
-                    .find(|a| {
+                // enumerate_adapters is async in wgpu 29
+                let adapters = instance.enumerate_adapters(Backends::all()).await;
+                // Use a block so all borrows on `adapters` are dropped before into_iter()
+                let idx = {
+                    let named = adapters.iter().position(|a| {
                         let info = a.get_info();
                         info.name.to_lowercase().contains(&name_lower)
                             && a.features().contains(required_features)
-                    })
-                    .unwrap_or_else(|| {
-                        eprintln!(
-                            "[gz_wgpu_rt_lidar] No RT-capable GPU matching '{}' found, \
-                             falling back to automatic selection.",
-                            name
-                        );
-                        instance
-                            .enumerate_adapters(Backends::all())
-                            .find(|a| a.features().contains(required_features))
-                            .expect("[gz_wgpu_rt_lidar] No ray-tracing capable GPU found")
                     });
+                    named
+                        .or_else(|| {
+                            eprintln!(
+                                "[gz_wgpu_rt_lidar] No RT-capable GPU matching '{}' found, \
+                                 falling back to automatic selection.",
+                                name
+                            );
+                            adapters
+                                .iter()
+                                .position(|a| a.features().contains(required_features))
+                        })
+                        .expect("[gz_wgpu_rt_lidar] No ray-tracing capable GPU found")
+                };
+                let adapter = adapters.into_iter().nth(idx).unwrap();
                 let info = adapter.get_info();
                 eprintln!(
                     "[gz_wgpu_rt_lidar] Selected GPU: {} ({:?})",
                     info.name, info.backend
                 );
                 adapter
-                    .request_device(
-                        &DeviceDescriptor {
-                            label: Some("gz_wgpu_rt_lidar device"),
-                            required_features,
-                            required_limits: Limits::default(),
-                            memory_hints: Default::default(),
-                        },
-                        None,
-                    )
+                    .request_device(&DeviceDescriptor {
+                        label: Some("gz_wgpu_rt_lidar device"),
+                        required_features,
+                        required_limits: Limits::default(),
+                        ..Default::default()
+                    })
                     .await
                     .expect("[gz_wgpu_rt_lidar] Failed to acquire device on selected GPU")
             }
