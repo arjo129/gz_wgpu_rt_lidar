@@ -160,14 +160,86 @@ pub struct RtRuntime {
 
 impl RtRuntime {
     pub async fn new() -> Self {
+        Self::new_with_gpu_name(None).await
+    }
+
+    pub async fn new_with_gpu_name(gpu_name: Option<String>) -> Self {
+        use wgpu_rt_lidar::wgpu::{Backends, DeviceDescriptor, Features, Limits};
+
         let instance = wgpu_rt_lidar::wgpu::Instance::default();
-        let (_, device, queue) = get_raytracing_gpu(&instance).await;
+
+        let required_features = Features::TEXTURE_BINDING_ARRAY
+            | Features::STORAGE_RESOURCE_BINDING_ARRAY
+            | Features::VERTEX_WRITABLE_STORAGE
+            | Features::EXPERIMENTAL_RAY_QUERY;
+
+        let (device, queue) = match gpu_name.as_deref().filter(|s| !s.is_empty()) {
+            Some(name) => {
+                let name_lower = name.to_lowercase();
+                let adapter = instance
+                    .enumerate_adapters(Backends::all())
+                    .find(|a| {
+                        let info = a.get_info();
+                        info.name.to_lowercase().contains(&name_lower)
+                            && a.features().contains(required_features)
+                    })
+                    .unwrap_or_else(|| {
+                        eprintln!(
+                            "[gz_wgpu_rt_lidar] No RT-capable GPU matching '{}' found, \
+                             falling back to automatic selection.",
+                            name
+                        );
+                        instance
+                            .enumerate_adapters(Backends::all())
+                            .find(|a| a.features().contains(required_features))
+                            .expect("[gz_wgpu_rt_lidar] No ray-tracing capable GPU found")
+                    });
+                let info = adapter.get_info();
+                eprintln!(
+                    "[gz_wgpu_rt_lidar] Selected GPU: {} ({:?})",
+                    info.name, info.backend
+                );
+                adapter
+                    .request_device(
+                        &DeviceDescriptor {
+                            label: Some("gz_wgpu_rt_lidar device"),
+                            required_features,
+                            required_limits: Limits::default(),
+                            memory_hints: Default::default(),
+                        },
+                        None,
+                    )
+                    .await
+                    .expect("[gz_wgpu_rt_lidar] Failed to acquire device on selected GPU")
+            }
+            None => {
+                let (_, device, queue) = get_raytracing_gpu(&instance).await;
+                (device, queue)
+            }
+        };
+
         RtRuntime { device, queue }
     }
 }
+
 #[no_mangle]
 pub extern "C" fn create_rt_runtime() -> *mut RtRuntime {
     Box::into_raw(Box::new(futures::executor::block_on(RtRuntime::new())))
+}
+
+#[no_mangle]
+pub extern "C" fn create_rt_runtime_with_name(
+    gpu_name: *const std::os::raw::c_char,
+) -> *mut RtRuntime {
+    let name = if gpu_name.is_null() {
+        None
+    } else {
+        let c_str = unsafe { std::ffi::CStr::from_ptr(gpu_name) };
+        c_str.to_str().ok().filter(|s| !s.is_empty()).map(|s| s.to_owned())
+    };
+    Box::into_raw(Box::new(
+        futures::executor::block_on(RtRuntime::new_with_gpu_name(name)),
+    ))
 }
 
 #[no_mangle]
