@@ -197,6 +197,12 @@ void RtSensor::LidarConfig(const sdf::ElementPtr & _sdf)
     this->config.noise.mean = noiseElem->Get < double > ("mean", 0.0).first;
     this->config.noise.stddev = noiseElem->Get < double > ("stddev", 0.01).first;
   }
+
+  if (_sdf->HasElement("gpu_name")) {
+    this->config.gpuName = _sdf->Get < std::string > ("gpu_name");
+    gzmsg << "[RtSensor] GPU hint for sensor [" << this->Name()
+          << "]: " << this->config.gpuName << std::endl;
+  }
 }
 
 //////////////////////////////////////////////////
@@ -225,5 +231,11 @@ void RtSensor::CameraConfig(const sdf::ElementPtr & _sdf)
     this->config.noise.type = noiseElem->Get < std::string > ("type", "gaussian").first;
     this->config.noise.mean = noiseElem->Get < double > ("mean", 0.0).first;
     this->config.noise.stddev = noiseElem->Get < double > ("stddev", 0.01).first;
+  }
+
+  if (_sdf->HasElement("gpu_name")) {
+    this->config.gpuName = _sdf->Get < std::string > ("gpu_name");
+    gzmsg << "[RtSensor] GPU hint for sensor [" << this->Name()
+          << "]: " << this->config.gpuName << std::endl;
   }
 }

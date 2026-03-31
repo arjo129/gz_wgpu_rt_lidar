@@ -96,6 +96,9 @@ public:
       double updateRate {20.0};
       bool alwaysOn {true};
       bool visualize {false};
+      /// \brief Case-insensitive GPU name hint for this sensor.
+      /// Stored for future multi-GPU support; currently informational.
+      std::string gpuName;
 
       // LiDAR specific
       struct
