@@ -3,7 +3,12 @@
   <world name="demo">
 
     <plugin
-      filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor"/>
+      filename="wgpu_rt_sensor" name="wgpu_sensor::WGPURtSensor">
+      <!-- Optional: select which GPU to use for ray-tracing (case-insensitive
+           substring match against the adapter name, e.g. "RTX 4090", "Radeon",
+           "Intel Arc"). Leave empty to use the first RT-capable GPU. -->
+      <!-- <gpu_name>RTX 4090</gpu_name> -->
+    </plugin>
 
     <plugin filename="gz-sim-physics-system"
             name="gz::sim::systems::Physics">
@@ -107,6 +112,10 @@
           <update_rate>10</update_rate>
           <topic>/my_robot/lidar/points</topic>
           <gz:rt_lidar>
+            <!-- Optional: GPU hint for this sensor (stored for future
+                 per-sensor GPU assignment; see plugin-level <gpu_name>
+                 for the currently active selection). -->
+            <!-- <gpu_name>RTX 4090</gpu_name> -->
             <scan>
               <lasers>16</lasers>
               <steps>3600</steps>
