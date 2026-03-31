@@ -44,8 +44,10 @@ public:
   /// \brief Destructor
     ~RTManager();
 
-  /// \brief Initializes the Rust backend runtime
-    void Initialize();
+  /// \brief Initializes the Rust backend runtime.
+  /// \param[in] _gpuName Case-insensitive substring of the GPU name to use
+  ///   (e.g. "RTX 4090"). Empty string selects the first RT-capable GPU.
+    void Initialize(const std::string & _gpuName = "");
 
   /// \brief Render job struct
     struct RenderJob
