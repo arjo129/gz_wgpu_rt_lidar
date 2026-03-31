@@ -73,8 +73,12 @@ private:
     gz::sim::EntityComponentManager & _ecm,
     gz::sim::EventManager & _eventMgr)
   {
+    std::string gpuName;
+    if (_sdf->HasElement("gpu_name")) {
+      gpuName = _sdf->Get < std::string > ("gpu_name");
+    }
     this->rtManager = std::make_unique < RTManager > ();
-    this->rtManager->Initialize();
+    this->rtManager->Initialize(gpuName);
   }
 
   void WGPURtSensor::PreUpdate(
