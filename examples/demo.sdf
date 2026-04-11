@@ -8,6 +8,10 @@
            substring match against the adapter name, e.g. "RTX 4090", "Radeon",
            "Intel Arc"). Leave empty to use the first RT-capable GPU. -->
       <!-- <gpu_name>RTX 4090</gpu_name> -->
+      <!-- Optional: 0-based index to distinguish between multiple GPUs
+           whose names match <gpu_name> (e.g. two identical RTX 4090s).
+           Defaults to 0. Ignored when <gpu_name> is empty. -->
+      <!-- <gpu_index>0</gpu_index> -->
     </plugin>
 
     <plugin filename="gz-sim-physics-system"
