@@ -47,7 +47,10 @@ public:
   /// \brief Initializes the Rust backend runtime.
   /// \param[in] _gpuName Case-insensitive substring of the GPU name to use
   ///   (e.g. "RTX 4090"). Empty string selects the first RT-capable GPU.
-    void Initialize(const std::string & _gpuName = "");
+  /// \param[in] _gpuIndex 0-based index to determine multiple GPUs whose
+  ///   names match _gpuName (e.g. two identical RTX 4090s). Ignored when
+  ///   _gpuName is empty.
+    void Initialize(const std::string & _gpuName = "", uint32_t _gpuIndex = 0);
 
   /// \brief Render job struct
     struct RenderJob
