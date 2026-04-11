@@ -160,10 +160,10 @@ pub struct RtRuntime {
 
 impl RtRuntime {
     pub async fn new() -> Self {
-        Self::new_with_gpu_name(None).await
+        Self::new_with_gpu_name(None, 0).await
     }
 
-    pub async fn new_with_gpu_name(gpu_name: Option<String>) -> Self {
+    pub async fn new_with_gpu_name(gpu_name: Option<String>, gpu_index: usize) -> Self {
         use wgpu_rt_lidar::wgpu::{Backends, DeviceDescriptor, Features, Limits};
 
         let instance = wgpu_rt_lidar::wgpu::Instance::default();
@@ -180,23 +180,43 @@ impl RtRuntime {
                 let adapters = instance.enumerate_adapters(Backends::all()).await;
                 // Use a block so all borrows on `adapters` are dropped before into_iter()
                 let idx = {
-                    let named = adapters.iter().position(|a| {
-                        let info = a.get_info();
-                        info.name.to_lowercase().contains(&name_lower)
-                            && a.features().contains(required_features)
-                    });
-                    named
-                        .or_else(|| {
-                            eprintln!(
-                                "[gz_wgpu_rt_lidar] No RT-capable GPU matching '{}' found, \
-                                 falling back to automatic selection.",
-                                name
-                            );
-                            adapters
-                                .iter()
-                                .position(|a| a.features().contains(required_features))
+                    let matching: Vec<usize> = adapters
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, a)| {
+                            let info = a.get_info();
+                            if info.name.to_lowercase().contains(&name_lower)
+                                && a.features().contains(required_features)
+                            {
+                                Some(i)
+                            } else {
+                                None
+                            }
                         })
-                        .expect("[gz_wgpu_rt_lidar] No ray-tracing capable GPU found")
+                        .collect();
+
+                    if matching.is_empty() {
+                        eprintln!(
+                            "[gz_wgpu_rt_lidar] No RT-capable GPU matching '{}' found, \
+                             falling back to automatic selection.",
+                            name
+                        );
+                        adapters
+                            .iter()
+                            .position(|a| a.features().contains(required_features))
+                            .expect("[gz_wgpu_rt_lidar] No ray-tracing capable GPU found")
+                    } else if gpu_index >= matching.len() {
+                        eprintln!(
+                            "[gz_wgpu_rt_lidar] gpu_index {} out of range for '{}' \
+                             ({} matching GPU(s)), falling back to first match.",
+                            gpu_index,
+                            name,
+                            matching.len()
+                        );
+                        matching[0]
+                    } else {
+                        matching[gpu_index]
+                    }
                 };
                 let adapter = adapters.into_iter().nth(idx).unwrap();
                 let info = adapter.get_info();
@@ -232,6 +252,7 @@ pub extern "C" fn create_rt_runtime() -> *mut RtRuntime {
 #[no_mangle]
 pub extern "C" fn create_rt_runtime_with_name(
     gpu_name: *const std::os::raw::c_char,
+    gpu_index: u32,
 ) -> *mut RtRuntime {
     let name = if gpu_name.is_null() {
         None
@@ -240,7 +261,7 @@ pub extern "C" fn create_rt_runtime_with_name(
         c_str.to_str().ok().filter(|s| !s.is_empty()).map(|s| s.to_owned())
     };
     Box::into_raw(Box::new(
-        futures::executor::block_on(RtRuntime::new_with_gpu_name(name)),
+        futures::executor::block_on(RtRuntime::new_with_gpu_name(name, gpu_index as usize)),
     ))
 }
 
