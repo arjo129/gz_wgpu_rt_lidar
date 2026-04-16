@@ -78,7 +78,7 @@ private:
     {
       std::string out = _s;
       std::transform(out.begin(), out.end(), out.begin(),
-        [](unsigned char c) {return static_cast < char > (std::tolower(c));});
+        [] (unsigned char c) {return static_cast < char > (std::tolower(c));});
       return out;
     }
   }
