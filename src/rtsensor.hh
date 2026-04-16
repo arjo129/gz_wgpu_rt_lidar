@@ -77,7 +77,7 @@ public:
     /// \brief Configure the sensor for camera-specific parameters.
     void CameraConfig(const sdf::ElementPtr & _sdf);
 
-    /// \brief Te parent entity (model or link) this sensor is attached to.
+    /// \brief The parent entity (model or link) this sensor is attached to.
     gz::sim::Entity parentEntity {gz::sim::kNullEntity};
 
     /// \brief Sensor type (camera or lidar).
@@ -96,6 +96,9 @@ public:
       double updateRate {20.0};
       bool alwaysOn {true};
       bool visualize {false};
+      /// \brief Case-insensitive GPU name hint for this sensor.
+      /// Stored for future multi-GPU support; currently informational.
+      std::string gpuName;
 
       // LiDAR specific
       struct

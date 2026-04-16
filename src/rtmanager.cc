@@ -82,9 +82,15 @@ namespace wgpu_sensor
   }
 
 //=============================================================================
-  void RTManager::Initialize()
+  void RTManager::Initialize(const std::string & _gpuName, uint32_t _gpuIndex)
   {
-    this->rt_runtime = create_rt_runtime();
+    if (_gpuName.empty()) {
+      this->rt_runtime = create_rt_runtime();
+    } else {
+      gzmsg << "RTManager: Requesting GPU: " << _gpuName
+            << " (index " << _gpuIndex << ")" << std::endl;
+      this->rt_runtime = create_rt_runtime_with_name(_gpuName.c_str(), _gpuIndex);
+    }
   }
 
 //=============================================================================

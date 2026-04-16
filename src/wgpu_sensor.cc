@@ -27,7 +27,10 @@
 #include <gz/sim/System.hh>
 #include <gz/sim/Util.hh>
 
+#include <algorithm>
+#include <cctype>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -65,7 +68,20 @@ private:
     std::unique_ptr < RTManager > rtManager;
     std::unordered_map < gz::sim::Entity, std::shared_ptr < rtsensor::RtSensor >> entitySensorMap;
 
+    std::string gpuName;
+    uint32_t gpuIndex {0};
   };
+
+  namespace
+  {
+    std::string ToLower(const std::string & _s)
+    {
+      std::string out = _s;
+      std::transform(out.begin(), out.end(), out.begin(),
+        [] (unsigned char c) {return static_cast < char > (std::tolower(c));});
+      return out;
+    }
+  }
 
   void WGPURtSensor::Configure(
     const gz::sim::Entity & _entity,
@@ -73,8 +89,14 @@ private:
     gz::sim::EntityComponentManager & _ecm,
     gz::sim::EventManager & _eventMgr)
   {
+    if (_sdf->HasElement("gpu_name")) {
+      this->gpuName = _sdf->Get < std::string > ("gpu_name");
+    }
+    if (_sdf->HasElement("gpu_index")) {
+      this->gpuIndex = _sdf->Get < uint32_t > ("gpu_index");
+    }
     this->rtManager = std::make_unique < RTManager > ();
-    this->rtManager->Initialize();
+    this->rtManager->Initialize(this->gpuName, this->gpuIndex);
   }
 
   void WGPURtSensor::PreUpdate(
@@ -99,6 +121,16 @@ private:
         gzerr << "Failed to load RtSensor for entity [" << _entity << "]" << std::endl;
         return true;
       }
+
+      // Claim sensor only if its gpu_name hint matches this plugin instance
+      // Silent drop on mismatch.
+      const std::string & sensorGpu = sensor->config.gpuName;
+      if (!sensorGpu.empty()) {
+        if (this->gpuName.empty() || ToLower(sensorGpu) != ToLower(this->gpuName)) {
+          return true;
+        }
+      }
+
       sensor->SetParentEntity(_parent->Data());
 
       this->rtManager->CreateSensorRenderer(_entity, sensor);
